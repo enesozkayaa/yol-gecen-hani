@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 4;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 5;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -308,7 +308,7 @@ const Oyun = (() => {
   function fazGeldi(m) {
     O.faz = m.faz;
     O.fazSon = performance.now() + m.kalan * 1000;
-    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli');
+    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli'); $('nitroGosterge').classList.add('gizli');
     if (O) O.izle = null;
     Sahne.yolHayalet(null);
     $('turSonu').classList.add('gizli');
@@ -556,13 +556,12 @@ const Oyun = (() => {
   // ---------- Yarış ----------
   const tus = new Set(), dokunTus = new Set();
   let otopilot = null;   // sadece test için
-  let nitroBasildi = false, kurtarBasildi = false;
+  let kurtarBasildi = false;
   addEventListener('keydown', e => {
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
     const k = e.key.toLowerCase();
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
     if (!e.repeat) {
-      if (k === ' ') nitroBasildi = true;
       if (k === 'r') { if (O?.faz === 'yerlestir') dondur(1); else if (O?.faz === 'yolKoy') yolCevir(); else kurtarBasildi = true; }
       if ((k === 'enter' || k === ' ') && O?.faz === 'yolKoy') yolEkle();
       if (k === 'q' && O?.faz === 'yerlestir') dondur(-1);
@@ -574,7 +573,7 @@ const Oyun = (() => {
   addEventListener('blur', () => { tus.clear(); dokunTus.clear(); });
   document.querySelectorAll('[data-t]').forEach(b => {
     const t = b.dataset.t;
-    const bas = e => { e.preventDefault(); Ses.baslat(); dokunTus.add(t); b.classList.add('basili'); if (t === 'nitro') nitroBasildi = true; if (t === 'kurtar') kurtarBasildi = true; try { b.setPointerCapture(e.pointerId); } catch (x) { } };
+    const bas = e => { e.preventDefault(); Ses.baslat(); dokunTus.add(t); b.classList.add('basili'); if (t === 'kurtar') kurtarBasildi = true; try { b.setPointerCapture(e.pointerId); } catch (x) { } };
     const birak = () => { dokunTus.delete(t); b.classList.remove('basili'); };
     b.addEventListener('pointerdown', bas); b.addEventListener('pointerup', birak); b.addEventListener('pointercancel', birak); b.addEventListener('lostpointercapture', birak);
   });
@@ -585,7 +584,7 @@ const Oyun = (() => {
     let gaz = (v('w') || v('arrowup') || dokunTus.has('gaz')) ? 1 : 0;
     if (v('s') || v('arrowdown') || dokunTus.has('fren')) gaz = -1;
     const don = ((v('d') || v('arrowright') || dokunTus.has('sag')) ? 1 : 0) - ((v('a') || v('arrowleft') || dokunTus.has('sol')) ? 1 : 0);
-    const turbo = nitroBasildi; nitroBasildi = false;
+    const turbo = v(' ') || dokunTus.has('nitro');   // basılı tuttukça nitro yanar
     if (otopilot && O?.ben) return Dunya.botGirdi(otopilot.bot ||= { a: O.ben, no: 0, hata: 0.04 }, O.d, O.yarisT, 1 / 60);
     return { gaz, don, turbo };
   }
@@ -605,17 +604,18 @@ const Oyun = (() => {
       if (p.no === O.benNo) {
         O.ben = Dunya.yeniAraba(y.x, y.y || 0, y.z, y.a); if (otopilot) otopilot = {};
         const g = m.guc?.[p.no] || {};
-        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = 1 + (g.nitro || 0) * 3;
+        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = O.ben.nitroAzami = 2 + (g.nitro || 0) * 4.5;
       }
     });
     if (O.ben) Sahne.kameraTakip(O.ben, true);
     else { const ilk = O.arabalar.values().next().value; if (ilk) Sahne.kameraTakip(ilk.s, true); }
     $('fazYazi').textContent = `🏁 ${O.tur}. yarış`;
     $('yarisBilgi').classList.remove('gizli');
+    $('nitroGosterge').classList.toggle('gizli', !O.ben);
     surusGoster(!!O.ben);
     O.izle = null; $('izlePanel').classList.add('gizli');
     O.bitirmeT = null;
-    $('ipucu').textContent = O.ben ? 'W/↑ gaz · S/↓ fren · A D / ← → direksiyon · Boşluk nitro · R kurtar' : '';
+    $('ipucu').textContent = O.ben ? 'W/↑ gaz · S/↓ fren · A D / ← → direksiyon · Boşluk basılı tut: nitro · R kurtar' : '';
     $('ipucu').classList.add('surus');
     if (O.ben) Ses.motorBaslat();
   }
@@ -636,7 +636,7 @@ const Oyun = (() => {
         case 'mayin': eve({ tip: 'mayin', pid: o.pid, x: o.x, y: o.y, z: o.z }); Sahne.patlama(o.x, o.y, o.z); Ses.patla(); break;
         case 'yay': Ses.yay(); Sahne.yayBas(a.x, a.z); Sahne.halkaEfekt(a.x, a.y + 0.3, a.z, 0x6aff7a, 3); break;
         case 'turbo': Ses.turbo(); break;
-        case 'nitro': Ses.nitro(); Sahne.halkaEfekt(a.x, a.y + 0.4, a.z, 0x4a9aff, 3); akis(`🔥 Nitro! (${a.nitro} kaldı)`); break;
+        case 'nitro': Ses.nitro(); Sahne.halkaEfekt(a.x, a.y + 0.4, a.z, 0x4a9aff, 3); break;
         case 'carpti': Ses.carp(o.guc); Sahne.kivilcim(o.x, (o.y ?? a.y) + 0.5, o.z, Math.min(24, 4 + o.guc * 1.5)); if (o.guc > 8) Sahne.sarsinti(0.25); break;
         case 'vurdu': Ses.vurdu(); Sahne.kivilcim(a.x, a.y + 0.6, a.z, 20); Sahne.sarsinti(0.5); break;
         case 'kalkan': Ses.kalkan(); Sahne.halkaEfekt(a.x, a.y + 0.6, a.z, 0x6ad8ff, 4); akis('🛡️ Kalkan seni korudu!', 'iyi'); break;
@@ -684,7 +684,8 @@ const Oyun = (() => {
       }
       const hiz = Math.hypot(a.vx, a.vz);
       Ses.motorAyarla(a.havada ? hiz * 1.3 : hiz, g.gaz, a.turboT > 0);
-      $('nitroBtn').classList.toggle('bos', !a.nitro);
+      $('nitroBtn').classList.toggle('bos', !(a.nitro > 0));
+      nitroCiz(a);
     }
     const simdi = performance.now();
     O.arabalar.forEach((c, no) => {
@@ -714,6 +715,12 @@ const Oyun = (() => {
     $('sayac').textContent = t < 0 ? '' : `${Math.floor(kalan / 60)}:${String(Math.floor(kalan % 60)).padStart(2, '0')}`;
     $('sayac').classList.toggle('az', t >= 0 && kalan < 10);
   }
+  function nitroCiz(a) {
+    const oran = a.nitroAzami ? Math.max(0, a.nitro / a.nitroAzami) : 0;
+    $('nitroDolu').style.height = (oran * 100).toFixed(1) + '%';
+    $('nitroGosterge').classList.toggle('yaniyor', !!a.nitroYaniyor && a.nitro > 0);
+    $('nitroGosterge').classList.toggle('bos', !(a.nitro > 0));
+  }
   function siraCiz() {
     const ilerleme = no => { const bi = O.bitenler.indexOf(no); if (bi >= 0) return 1e6 - bi; const c = O.arabalar.get(no); return c ? c.ci : -1; };
     const liste = [...O.arabalar.keys()].map(no => ({ no, u: ilerleme(no) })).sort((x, y) => y.u - x.u);
@@ -723,7 +730,7 @@ const Oyun = (() => {
     const benSira = liste.findIndex(x => x.no === O.benNo) + 1;
     $('siraYazi').innerHTML = `${benSira}.<small>/${liste.length}</small>`;
     const a = O.ben;
-    $('gucYazi').textContent = [a.nitro ? `🔥×${a.nitro}` : '', a.kalkan ? '🛡️' : ''].filter(Boolean).join('  ');
+    $('gucYazi').textContent = a.kalkan ? '🛡️ Kalkan' : '';
     const yuzde = Math.min(100, Math.round(a.enIleri / Math.max(1, O.d.bitisI) * 100));
     $('hizYazi').textContent = a.bitti ? '🏁 Bitirdin!' : `${Math.round(Math.hypot(a.vx, a.vz) * 9)} km/s · %${yuzde}`;
   }
@@ -732,7 +739,7 @@ const Oyun = (() => {
   function izlemeyeBasla() {
     if (!O || O.faz !== 'yaris' || O.izle) return;
     O.izle = { mod: 'oyuncu', no: null };
-    $('izlePanel').classList.remove('gizli');
+    $('izlePanel').classList.remove('gizli'); $('nitroGosterge').classList.add('gizli');
     surusGoster(false);
     $('ipucu').textContent = dokun ? '' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
     izleDegistir(0);

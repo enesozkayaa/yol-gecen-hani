@@ -196,7 +196,7 @@ const Motor = (() => {
       yerler[o.no] = y;
       const a = D.yeniAraba(y.x, y.y, y.z, y.a);
       const g = M.guc[o.no] || {};
-      a.kalkan = g.kalkan || 0; a.nitro = 1 + (g.nitro || 0) * 3;
+      a.kalkan = g.kalkan || 0; a.nitro = a.nitroAzami = 2 + (g.nitro || 0) * 4.5;
       M.yaris.arabalar[o.no] = a;
       if (o.bot) { a.sinir = zorluk.sinir; M.yaris.botlar[o.no] = { a, no: o.no, hata: zorluk.hata * (0.6 + Math.random() * 0.8) }; }
     });

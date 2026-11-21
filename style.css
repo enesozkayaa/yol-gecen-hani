@@ -103,6 +103,18 @@ body.dokun #ipucu.surus { display: none; }
 #yerlestirPanel .satir { width: 100%; }
 #yerlestirPanel button { pointer-events: auto; }
 
+/* Nitro göstergesi */
+#nitroGosterge { position: absolute; right: max(14px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%); display: grid; justify-items: center; gap: 4px; }
+#nitroGosterge span { font-size: 24px; }
+#nitroGosterge small { font-weight: 900; font-size: 11px; letter-spacing: 1px; }
+#nitroKap { position: relative; width: 22px; height: min(38vh, 260px); background: #000a; border: 3px solid #fffa; border-radius: 12px; overflow: hidden; }
+#nitroDolu { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; background: linear-gradient(#bfe4ff, #3a9aff 40%, #1a4ad8); transition: height .08s linear; }
+#nitroGosterge.yaniyor #nitroKap { border-color: #6ad0ff; box-shadow: 0 0 16px #4ab0ff, 0 0 30px #2a7aff; }
+#nitroGosterge.yaniyor #nitroDolu { background: linear-gradient(#fff6a0, #ffb030 40%, #ff5a1a); }
+#nitroGosterge.bos { opacity: .45; }
+body.dokun #nitroGosterge { top: 38%; }
+@media (max-height: 500px) { #nitroKap { height: 30vh; width: 18px; } #nitroGosterge span { font-size: 18px; } }
+
 /* İzleme */
 #izlePanel { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 28px); transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: #000b; border-radius: 14px; padding: 6px 8px; pointer-events: auto; white-space: nowrap; }
 #izlePanel span { font-weight: 900; font-size: 16px; min-width: 120px; text-align: center; }

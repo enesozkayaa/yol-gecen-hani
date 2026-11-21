@@ -41,7 +41,7 @@
           <li>🏗️ <b>Yol ekleme:</b> Herkes kendi yolunu pistin ucuna kendisi ekler: istersen ↔ ile ters çevir, sonra ✔ Yola ekle. Kim önce eklerse pist onun yoluyla devam eder. Bitiş her turda yeni uca taşınır. Bir yol eskisinin üstüne denk gelirse kendiliğinden yukarı kaldırılır. Bazı yollarda yanlarda korkuluk vardır, bazılarında yer yer, bazılarında hiç yok.</li>
           <li>🧩 <b>Tuzak koyma:</b> Herkes aynı anda tuzağını yolun istediği yerine koyar. Bilgisayar: fareyle gez, <b>tıkla</b> koy, <b>R</b> tuzağı çevir. Telefon: dokunup yer seç, ✔ koy.</li>
           <li>🎥 <b>Kamera:</b> Yarış dışında haritayı her yönden görebilirsin: sol tuşla sürükle döndür (360°), sağ tuşla sürükle kaydır, tekerlek yakınlaş. Telefonda tek parmak döndürür, iki parmak kaydırır ve yakınlaştırır.</li>
-          <li>🏁 <b>Yarış:</b> Kamera arabanın arkasında. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> nitro (her yarışta 1 tane, Nitro kartıyla +3), <b>R</b> takılınca kurtar. Yoldan düşersen az geriden devam edersin. Bitirince diğerlerini izlersin: ◀ ▶ (Q / E) oyuncu değiştir, 🎥 (F) serbest bakış.</li>
+          <li>🏁 <b>Yarış:</b> Kamera arabanın arkasında. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> basılı tut: nitro (sağdaki gösterge azalır, bırakınca kalanı sonraya kalır; Nitro kartı depoyu büyütür), <b>R</b> takılınca kurtar. Yoldan düşersen az geriden devam edersin. Bitirince diğerlerini izlersin: ◀ ▶ (Q / E) oyuncu değiştir, 🎥 (F) serbest bakış.</li>
           <li>🏆 Puan: 1. olan +3, 2. +2, bitiren herkes +1. Kimse bitiremezse sonraki tuzak seçiminde mutlaka Söküm ya da Bomba çıkar.</li>
           <li>🪤 <b>Tuzaklar:</b> 🧱 beton bariyer, 🌀 dönen kol, 🔨 yıkım güllesi, 🟧 kayan blok, 🛢️ yağ, 🟫 çamur, 💥 mayın, 🦘 zıplatıcı.</li>
           <li>🛟 <b>Fayda:</b> ⏩ hız şeridi, 🚧 çelik korkuluk (düşmeni önler), 🔧 söküm (bir tuzağı söker), 💣 bomba (çevresini temizler), 🛡️ kalkan ve 🔥 nitro (sonraki yarış için sana güç).</li>
@@ -96,6 +96,7 @@
     <div id="akis"></div>
     <div id="buyukYazi"></div>
     <div id="izlePanel" class="gizli"><button id="izleOnceBtn">◀</button><span id="izleAd"></span><button id="izleSonraBtn">▶</button><button id="izleSerbestBtn">🎥 Serbest bakış</button></div>
+    <div id="nitroGosterge" class="gizli"><span>🔥</span><div id="nitroKap"><div id="nitroDolu"></div></div><small>NİTRO</small></div>
     <div id="yarisBilgi" class="gizli"><div id="siraYazi"></div><div id="gucYazi"></div><div id="hizYazi"></div></div>
     <div id="ipucu"></div>
     <!-- Kart seçme -->

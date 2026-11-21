@@ -53,7 +53,7 @@ const Dunya = (() => {
     silgi:    { ad: 'Söküm',            emoji: '🔧', kat: 'fayda',  agirlik: 6, acik: 'Konmuş bir tuzağı söker.' },
     bomba:    { ad: 'Bomba',            emoji: '💣', kat: 'fayda',  agirlik: 4, acik: 'Çevresindeki bütün tuzakları patlatır.' },
     kalkan:   { ad: 'Kalkan',           emoji: '🛡️', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta ilk tuzak sana işlemez.', kisisel: true },
-    nitro:    { ad: 'Nitro',            emoji: '🔥', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta +3 nitro (Boşluk).', kisisel: true },
+    nitro:    { ad: 'Nitro',            emoji: '🔥', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta nitro deposu çok daha dolu.', kisisel: true },
   };
   const KATLAR = {
     yol: { ad: 'Yol', renk: '#3a6ad8' }, engel: { ad: 'Engel', renk: '#e0603a' },
@@ -312,7 +312,9 @@ const Dunya = (() => {
     // sürüş
     if (!a.havada) {
       let f = a.vx * fx + a.vz * fz, l = -a.vx * fz + a.vz * fx;
-      if (g.turbo && a.nitro > 0 && a.turboT <= 0) { a.nitro--; a.turboT = 1.6; ol.push({ tip: 'nitro' }); }
+      // nitro: basılı tuttukça depo azalır, bırakınca kalanı sonraya kalır
+      if (g.turbo && a.nitro > 0) { if (!a.nitroYaniyor) ol.push({ tip: 'nitro' }); a.nitroYaniyor = true; a.nitro = Math.max(0, a.nitro - dt); a.turboT = Math.max(a.turboT, 0.12); }
+      else a.nitroYaniyor = false;
       const azami = AZAMI_HIZ * hizCarp * (a.turboT > 0 ? 1.6 : 1) * (a.sinir || 1);
       const kontrol = a.sersem > 0 || a.bitti ? 0 : 1;
       const gaz = g.gaz * kontrol;
@@ -523,7 +525,7 @@ const Dunya = (() => {
     bot.bekle = Math.max(0, (bot.bekle || 0) - dt * 0.5);
     // önümde yol yoksa fren
     if (!atla && sp > 3) { const l = sp * 0.35; if (!zemin(d, a.x + a.vx / sp * l, a.z + a.vz / sp * l, a.y + 0.5, 0)) gaz = -0.7; }
-    return { gaz, don: gaz < 0 ? -don : don, turbo: a.nitro > 0 && Math.abs(fark) < 0.15 && sp > 11 && viraj < 0.3 && Math.random() < 0.03 };
+    return { gaz, don: gaz < 0 ? -don : don, turbo: a.nitro > 0 && Math.abs(fark) < 0.2 && sp > 10 && viraj < 0.3 && !atla && (a.nitroYaniyor || Math.random() < 0.05) };
   }
 
   const api = { ORTAMLAR, YOLLAR, YOL_KARTLARI, TURLER, KATLAR, SILGI_R, BOMBA_R, ARABA_R, AZAMI_HIZ, GENIS, ZEMIN_Y, BAS_UZ, G,
