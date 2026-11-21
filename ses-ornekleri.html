@@ -40,6 +40,7 @@
     // 9 saniyelik deneme sürüşü
     function dinle(tip) {
       Ses.baslat();
+      if (!Ses.acik) Ses.degistir();   // oyunun sesi kapalı kaldıysa aç
       if (calan) { clearInterval(calan); Ses.motorDurdur(); }
       setTimeout(() => {
         Ses.motorBaslat(tip);

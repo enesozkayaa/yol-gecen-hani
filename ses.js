@@ -9,6 +9,7 @@ const Ses = (() => {
     if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); ana = ctx.createGain(); ana.gain.value = acik ? 0.5 : 0; ana.connect(ctx.destination); } catch (e) { return; } }
     if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   }
+  addEventListener('storage', e => { if (e.key === 'or.ses') { acik = e.newValue !== '0'; if (ana) ana.gain.value = acik ? 0.5 : 0; } });
   function degistir() { acik = !acik; if (ana) ana.gain.value = acik ? 0.5 : 0; try { localStorage.setItem('or.ses', acik ? '1' : '0'); } catch (e) { } return acik; }
   function ton(f, sure, tip = 'sine', ses = 0.3, f2 = null, gecikme = 0) {
     if (!ctx || !acik) return;

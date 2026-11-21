@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 10;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 11;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -138,6 +138,7 @@ const Oyun = (() => {
   let motorDeneme = null;
   function motorDinle() {
     Ses.baslat(); clearInterval(motorDeneme); Ses.motorDurdur();
+    if (!Ses.acik) { Ses.degistir(); $('sesBtn').textContent = '🔊'; }   // dinlemek isteyen sesi duysun
     setTimeout(() => {
       Ses.motorBaslat(); const bas = performance.now();
       motorDeneme = setInterval(() => {
