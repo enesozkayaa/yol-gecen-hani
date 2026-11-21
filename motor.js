@@ -1,13 +1,13 @@
 // =============================================================
 // Oyuncak Rallisi - oyun motoru. Sadece oda sahibinde (ya da tek kişilik oyunda) çalışır.
-// Tur sırası: yol kartı seçme → tuzak kartı seçme → yollar pistin ucuna sırayla eklenir (inşa)
+// Tur sırası: yol kartı kapma → tuzak kartı kapma → herkes yolunu pistin ucuna kendisi ekler (kim önce basarsa)
 //             → tuzaklar herkesçe aynı anda konur → yarış → puan → (yeni tur ya da oyun sonu).
 // Botları da burası sürer. Node'da araclar/test-motor.js ile denenir.
 // =============================================================
 
 const Motor = (() => {
   const D = typeof Dunya !== 'undefined' ? Dunya : require('./dunya.js');
-  const SECIM_SURE = 12, PUAN_SURE = 7, GERI_SAYIM = 3, INSA_ARA = 1.1, AZAMI_TUZAK = 22;
+  const SECIM_SURE = 12, PUAN_SURE = 7, GERI_SAYIM = 3, AZAMI_TUZAK = 22;
   let M = null, cikisFn = null, sayac = null;
   const yay = m => cikisFn && cikisFn.herkese(m);
   const birine = (no, m) => { const o = M.oyuncular[no]; if (o && !o.bot && cikisFn.birine) cikisFn.birine(o.id, m); };
@@ -51,38 +51,40 @@ const Motor = (() => {
   }
   function turBaslat() {
     M.tur++;
-    M.el = {}; M.yolEl = {}; M.koydu = {}; M.yolSira = [];
+    M.el = {}; M.yolEl = {}; M.koydu = {};
     secimBaslat('yol');
   }
+  // Kartlar ortaya gelir, herkes aynı anda kapar: kim önce tıklarsa kart onundur (herkes bir tane alır)
   function secimBaslat(tip) {
     const akt = aktifler();
-    const sira = akt.map(o => ({ no: o.no, p: o.puan, r: Math.random() })).sort((a, b) => a.p - b.p || a.r - b.r).map(o => o.no);
-    M.secim = { tip, kartlar: kartUret(tip, akt.length + 1), sira, k: 0 };
+    M.secim = { tip, kartlar: kartUret(tip, akt.length + 1), aldi: {} };
     M.faz = 'secim';
-    siradakiSecsin();
-  }
-  function siradakiSecsin() {
-    const S = M.secim;
-    while (S.k < S.sira.length && M.oyuncular[S.sira[S.k]].cikti) S.k++;
-    if (S.k >= S.sira.length) return S.tip === 'yol' ? secimBaslat('tuzak') : insaBaslat();
-    const no = S.sira[S.k];
     M.fazBitis = M.t + SECIM_SURE;
-    M.botSecT = M.oyuncular[no].bot ? M.t + rnd(0.7, 1.5) : null;
-    yay({ tip: 'faz', faz: 'secim', secimTip: S.tip, tur: M.tur, kartlar: S.kartlar, sira: S.sira, siradaki: no, kalan: SECIM_SURE, puan: puanlar() });
+    M.botSecPlan = {};
+    akt.forEach(o => { if (o.bot) M.botSecPlan[o.no] = M.t + rnd(1.2, 5); });
+    yay({ tip: 'faz', faz: 'secim', secimTip: tip, tur: M.tur, kartlar: M.secim.kartlar, kalan: SECIM_SURE, puan: puanlar() });
   }
   function secimYap(no, k) {
     const S = M.secim;
-    if (M.faz !== 'secim' || S.sira[S.k] !== no) return;
+    if (M.faz !== 'secim' || S.aldi[no] !== undefined) return;
     const kart = S.kartlar[k];
     if (!kart || kart.alan !== null) return;
-    kart.alan = no;
-    if (S.tip === 'yol') { M.yolEl[no] = kart.tur; M.yolSira.push(no); } else M.el[no] = kart.tur;
+    kart.alan = no; S.aldi[no] = k;
+    if (S.tip === 'yol') M.yolEl[no] = kart.tur; else M.el[no] = kart.tur;
     yay({ tip: 'sec', no, kart: k, tur: kart.tur, secimTip: S.tip });
-    S.k++;
-    siradakiSecsin();
+    if (aktifler().every(o => S.aldi[o.no] !== undefined)) secimBitti();
+  }
+  function secimBitti() {
+    const S = M.secim;
+    // süre bitince kart almayanlara kalanlardan biri verilir
+    aktifler().forEach(o => { if (S.aldi[o.no] === undefined) { const bos = S.kartlar.findIndex(k => k.alan === null); if (bos >= 0) secimYap(o.no, bos); } });
+    if (M.faz !== 'secim' || S.bitti) return;
+    S.bitti = true;
+    M.faz = 'secimArasi'; M.araT = M.t + 0.8;   // son kartın kaybolması görünsün
   }
   function botSec(no) {
     const bos = M.secim.kartlar.map((k, i) => ({ k, i })).filter(x => x.k.alan === null);
+    if (!bos.length) return;
     if (M.secim.tip === 'tuzak') {
       if (M.kimseBitirmedi) { const yk = bos.find(x => ['bomba', 'silgi'].includes(x.k.tur)); if (yk) return secimYap(no, yk.i); }
       const puan = T => (T.kat === 'engel' || T.kat === 'patlar' ? 3 : T.kat === 'kaygan' ? 2.3 : 2) + Math.random() * 2.5;
@@ -91,23 +93,28 @@ const Motor = (() => {
     secimYap(no, bos[0].i);
   }
 
-  // ---------- İnşa: yollar seçim sırasıyla pistin ucuna eklenir ----------
-  function insaBaslat() {
-    M.faz = 'insa';
-    M.insaKuyruk = M.yolSira.filter(no => M.yolEl[no]);
-    M.insaT = M.t + 0.6;
-    yay({ tip: 'faz', faz: 'insa', kalan: M.insaKuyruk.length * INSA_ARA + 1 });
+  // ---------- Yol koyma: herkes kendi yolunu pistin ucuna kendisi ekler, kim önce basarsa ----------
+  function yolKoyBaslat() {
+    M.faz = 'yolKoy';
+    M.yolKoydu = {};
+    M.botPlan = {};
+    aktifler().forEach(o => { if (!M.yolEl[o.no]) M.yolKoydu[o.no] = true; else if (o.bot) M.botPlan[o.no] = M.t + rnd(1.5, 7); });
+    M.fazBitis = M.t + M.ayar.yerlestir;
+    yay({ tip: 'faz', faz: 'yolKoy', yollar: M.yolEl, kalan: M.ayar.yerlestir });
+    yolKoyBittiMi();
   }
-  function insaTik() {
-    if (M.t < M.insaT) return;
-    if (!M.insaKuyruk.length) return yerlestirBaslat();
-    const no = M.insaKuyruk.shift();
-    const { ekler, not } = D.uygunYol(M.dizi, M.yolEl[no]);
+  function yolKoy(no, ayna) {
+    if (M.faz !== 'yolKoy' || M.yolKoydu[no] || !M.yolEl[no]) return;
+    let tur = M.yolEl[no];
+    if (ayna && D.YOLLAR[tur].ayna) tur = D.YOLLAR[tur].ayna;
+    const { ekler, not } = D.uygunYol(M.dizi, tur);
     M.dizi.push(...ekler);
+    M.yolKoydu[no] = true;
     dunyaYenile();
-    yay({ tip: 'yolEkle', no, tur: M.yolEl[no], ekler, not, dizi: M.dizi });
-    M.insaT = M.t + INSA_ARA;
+    yay({ tip: 'yolEkle', no, tur, ekler, not, dizi: M.dizi });
+    yolKoyBittiMi();
   }
+  function yolKoyBittiMi() { if (aktifler().every(o => M.yolKoydu[o.no])) M.fazBitis = Math.min(M.fazBitis, M.t + 1.5); }
 
   // ---------- Tuzak yerleştirme ----------
   function yerlestirBaslat() {
@@ -189,7 +196,7 @@ const Motor = (() => {
       yerler[o.no] = y;
       const a = D.yeniAraba(y.x, y.y, y.z, y.a);
       const g = M.guc[o.no] || {};
-      a.kalkan = g.kalkan || 0; a.nitro = (g.nitro || 0) * 3;
+      a.kalkan = g.kalkan || 0; a.nitro = 1 + (g.nitro || 0) * 3;
       M.yaris.arabalar[o.no] = a;
       if (o.bot) { a.sinir = zorluk.sinir; M.yaris.botlar[o.no] = { a, no: o.no, hata: zorluk.hata * (0.6 + Math.random() * 0.8) }; }
     });
@@ -264,9 +271,17 @@ const Motor = (() => {
     if (!M) return;
     M.t += dt;
     if (M.faz === 'secim') {
-      if (M.botSecT && M.t >= M.botSecT) { M.botSecT = null; botSec(M.secim.sira[M.secim.k]); }
-      else if (M.t >= M.fazBitis) { const bos = M.secim.kartlar.findIndex(k => k.alan === null); secimYap(M.secim.sira[M.secim.k], bos); }
-    } else if (M.faz === 'insa') insaTik();
+      for (const no in M.botSecPlan) if (M.t >= M.botSecPlan[no]) { delete M.botSecPlan[no]; if (M.faz === 'secim') botSec(+no); }
+      if (M.faz === 'secim' && M.t >= M.fazBitis) secimBitti();
+    } else if (M.faz === 'secimArasi') {
+      if (M.t >= M.araT) { if (M.secim.tip === 'yol') secimBaslat('tuzak'); else yolKoyBaslat(); }
+    } else if (M.faz === 'yolKoy') {
+      for (const no in M.botPlan) if (M.t >= M.botPlan[no]) { delete M.botPlan[no]; yolKoy(+no, Math.random() < 0.3); }
+      if (M.t >= M.fazBitis) {
+        aktifler().forEach(o => { if (!M.yolKoydu[o.no]) yay({ tip: 'yolKoymadi', no: o.no }); });
+        yerlestirBaslat();
+      }
+    }
     else if (M.faz === 'yerlestir') {
       for (const no in M.botPlan) if (M.t >= M.botPlan[no]) { delete M.botPlan[no]; try { botYerlestir(+no); } catch (e) { console.warn('bot yerleştiremedi', e); } if (!M.koydu[no]) { M.koydu[no] = true; hepsiKoyduMu(); } }
       if (M.t >= M.fazBitis) {
@@ -284,7 +299,9 @@ const Motor = (() => {
     if (!o || o.cikti) return;
     const no = o.no;
     if (m.tip === 'sec') secimYap(no, m.kart);
+    else if (m.tip === 'yolKoy') yolKoy(no, !!m.ayna);
     else if (m.tip === 'koy') koy(no, +m.x, +m.y, +m.z, +m.r);
+    else if (m.tip === 'fare' && M.faz === 'secim') { const f = { tip: 'fare', no, x: +m.x, y: +m.y }; if (cikisFn.digerlerine) cikisFn.digerlerine(id, f); }
     else if (m.tip === 'imlec' && M.faz === 'yerlestir') { const im = { tip: 'imlec', no, x: m.x, y: m.y, z: m.z, r: m.r }; if (cikisFn.digerlerine) cikisFn.digerlerine(id, im); else yay(im); }
     else if (m.tip === 'ben' && M.faz === 'yaris' && Array.isArray(m.d)) {
       const a = M.yaris.arabalar[no]; if (!a) return;
@@ -305,7 +322,8 @@ const Motor = (() => {
     if (!o) return;
     o.cikti = true;
     yay({ tip: 'cikti', no: o.no });
-    if (M.faz === 'secim' && M.secim.sira[M.secim.k] === o.no) { M.secim.k++; siradakiSecsin(); }
+    if (M.faz === 'secim' && aktifler().every(x => M.secim.aldi[x.no] !== undefined)) secimBitti();
+    if (M.faz === 'yolKoy') { M.yolKoydu[o.no] = true; yolKoyBittiMi(); }
     if (M.faz === 'yerlestir') { M.koydu[o.no] = true; hepsiKoyduMu(); }
   }
 

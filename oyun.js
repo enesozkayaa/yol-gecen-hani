@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 2;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 3;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -195,6 +195,7 @@ const Oyun = (() => {
     surusGoster(false);
     $('akis').innerHTML = ''; $('ipucu').textContent = '';
     menuOrtam = null;
+    fareler.forEach(f => f.el.remove()); fareler.clear();
   }
   function oyunKur(m) {
     oyunTemizle();
@@ -238,7 +239,9 @@ const Oyun = (() => {
     switch (m.tip) {
       case 'faz': fazGeldi(m); break;
       case 'sec': {
+        if (O.oyuncular[m.no]?.bot && m.no !== O.benNo) { const c = kartMerkez(m.kart); fareAyarla(m.no, c.x, c.y); if (botFare[m.no]) botFare[m.no].t = 0.9; }
         const k = O.secim?.kartlar[m.kart]; if (k) k.alan = m.no;
+        if (O.secim) O.secim.aldi[m.no] = m.kart;
         if (m.secimTip === 'yol') O.yolEl[m.no] = m.tur; else O.el[m.no] = m.tur;
         Ses.kartAl();
         akis(`${ad(m.no)} → ${parcaAd(m.tur)}`);
@@ -260,8 +263,10 @@ const Oyun = (() => {
         const yeni = []; for (let i = 0; i <= O.dizi.length - onceki; i++) yeni.push(1 + onceki + i);
         Sahne.yolGuncelle(O.d, yeni);
         const C = O.d.cizgi, son = C[C.length - 1];
-        Sahne.kameraGenel({ x: son.x, y: son.y, z: son.z }, 70);
+        Sahne.kameraGenel({ x: son.x, y: son.y, z: son.z }, 60);
         Ses.koy();
+        if (m.no === O.benNo) O.yolKoydum = true;
+        if (O.faz === 'yolKoy') { yolPanelCiz(); yolHayaletGuncelle(); }
         akis(`🛣️ ${ad(m.no)}: ${parcaAd(m.tur)}${m.not ? ` (${m.not})` : ''}`);
         break;
       }
@@ -276,7 +281,9 @@ const Oyun = (() => {
         break;
       }
       case 'red': O.bekliyor = false; O.redYazi = m.neden; Ses.olmaz(); yerlestirPanelCiz(); break;
+      case 'fare': if (m.no !== O.benNo && O.faz === 'secim') fareAyarla(m.no, m.x, m.y); break;
       case 'imlec': if (m.no !== O.benNo && O.faz === 'yerlestir' && !O.koydu[m.no]) Sahne.imlecAyarla(m.no, O.el[m.no], m.x, m.y, m.z, m.r); break;
+      case 'yolKoymadi': akis(`⌛ ${ad(m.no)} yolunu ekleyemedi`); break;
       case 'koymadi': akis(`⌛ ${ad(m.no)} parçasını koyamadı`); Sahne.imlecAyarla(m.no, null); break;
       case 'durum': durumGeldi(m); break;
       case 'patla':
@@ -301,7 +308,8 @@ const Oyun = (() => {
   function fazGeldi(m) {
     O.faz = m.faz;
     O.fazSon = performance.now() + m.kalan * 1000;
-    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli');
+    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli');
+    Sahne.yolHayalet(null);
     $('turSonu').classList.add('gizli');
     surusGoster(false);
     Sahne.hayaletAyarla(null);
@@ -314,18 +322,22 @@ const Oyun = (() => {
         Sahne.kameraPistiGoster(O.d);
         Sahne.imlecleriTemizle();
         ekranGoster('hud');
-        buyuk(`${O.tur}. TUR`, 'Önce bir yol, sonra bir tuzak seç', 1500);
+        buyuk(`${O.tur}. TUR`, 'Kap! Önce bir yol, sonra bir tuzak', 1500);
       }
-      O.secim = { tip: m.secimTip, kartlar: m.kartlar.map(k => ({ ...k })), sira: m.sira, siradaki: m.siradaki };
-      $('fazYazi').textContent = m.secimTip === 'yol' ? '🛣️ Yol seç' : '🪤 Tuzak seç';
+      O.secim = { tip: m.secimTip, kartlar: m.kartlar.map(k => ({ ...k })), aldi: {} };
+      $('fazYazi').textContent = m.secimTip === 'yol' ? '🛣️ Yol kap!' : '🪤 Tuzak kap!';
       $('kartPanel').classList.remove('gizli');
-      if (m.siradaki === O.benNo) { Ses.sendeSira(); }
+      Ses.sendeSira();
       kartlariCiz();
       $('ipucu').textContent = '';
-    } else if (m.faz === 'insa') {
-      $('fazYazi').textContent = '🛣️ Yollar ekleniyor';
+    } else if (m.faz === 'yolKoy') {
+      O.yolEl = m.yollar; O.yolKoydum = !O.yolEl[O.benNo]; O.yolAyna = false;
+      $('fazYazi').textContent = '🛣️ Yolunu ekle';
+      $('yolPanel').classList.remove('gizli');
+      yolPanelCiz(); yolHayaletGuncelle();
       const C = O.d.cizgi, son = C[C.length - 1];
-      Sahne.kameraGenel({ x: son.x, y: son.y, z: son.z }, 70);
+      Sahne.kameraGenel({ x: son.x, y: son.y, z: son.z }, 60);
+      $('ipucu').textContent = dokun ? '' : 'Enter / Boşluk: yola ekle · R: ters çevir · Sol sürükle: döndür · Tekerlek: yakınlaş';
     } else if (m.faz === 'yerlestir') {
       O.el = m.eller; O.koydu = { ...m.koydu }; O.bekliyor = false; O.redYazi = '';
       $('fazYazi').textContent = '🧩 Parçanı yerleştir';
@@ -336,7 +348,7 @@ const Oyun = (() => {
       Sahne.kameraPistiGoster(O.d);
       $('yerlestirPanel').classList.remove('gizli');
       yerlestirPanelCiz();
-      $('ipucu').textContent = dokun ? '' : 'Fareyle yolun üstünde gez · Tıkla: koy · Sürükle: kaydır · Tekerlek: yakınlaş · R / sağ tık: döndür';
+      $('ipucu').textContent = dokun ? '' : 'Tıkla: koy · Sol sürükle: haritayı döndür · Sağ sürükle: kaydır · Tekerlek: yakınlaş · R: tuzağı çevir';
     } else if (m.faz === 'yaris') yarisBasla(m);
     else if (m.faz === 'puan') puanGoster(m);
     puanCiz();
@@ -345,30 +357,93 @@ const Oyun = (() => {
   // ---------- Kart seçme ----------
   function kartlariCiz() {
     const S = O.secim; if (!S) return;
-    const benimSiram = S.siradaki === O.benNo && O.faz === 'secim' && !(S.tip === 'yol' ? O.yolEl : O.el)[O.benNo];
+    const benimSiram = O.faz === 'secim' && S.aldi[O.benNo] === undefined;
     const neyi = S.tip === 'yol' ? 'yol' : 'tuzak';
-    $('kartBaslik').textContent = O.faz !== 'secim' ? '' : benimSiram ? `👉 Sıra sende! Bir ${neyi} seç` : `${ad(S.siradaki)} ${neyi} seçiyor…`;
+    $('kartBaslik').textContent = O.faz !== 'secim' ? '' : benimSiram ? `👉 Kap! İstediğin ${neyi}u al` : '✅ Aldın! Diğerleri bekleniyor…';
     $('kartBaslik').classList.toggle('sende', benimSiram);
     const anahtar = O.tur + ':' + S.tip + ':' + S.kartlar.map(k => k.tur).join(',');
-    if ($('kartlar').dataset.anahtar !== anahtar) {   // yeni kartlar: bir kez çiz (animasyon bir kez oynasın)
+    if ($('kartlar').dataset.anahtar !== anahtar) {   // yeni kartlar: bir kez çiz
       $('kartlar').dataset.anahtar = anahtar;
       $('kartlar').innerHTML = S.kartlar.map((k, i) => {
         const T = S.tip === 'yol' ? Dunya.YOLLAR[k.tur] : T_[k.tur], kat = K_[S.tip === 'yol' ? 'yol' : T.kat];
-        return `<div class="pk" data-i="${i}" style="--k:${kat.renk}"><span class="kat">${kat.ad}</span><span class="em">${T.emoji}</span><b>${T.ad}</b><small>${T.acik}</small></div>`;
-      }).join('');
+        return `<div class="pk" data-i="${i}" title="${kacis(T.ad)}" style="--k:${kat.renk}"><img src="${Sahne.kartResmi(S.tip, k.tur)}" alt="${kacis(T.ad)}" draggable="false"></div>`;
+      }).join('') + '<div id="fareler"></div>';
+      fareler.forEach(f => $('fareler').appendChild(f.el));
       $('kartlar').querySelectorAll('.pk').forEach(el => { el.onclick = () => {
         const S2 = O.secim; if (!el.classList.contains('secilebilir')) return;
-        if (O.secimGitti === O.tur + ':' + S2.tip + ':' + S2.siradaki) return;
-        O.secimGitti = O.tur + ':' + S2.tip + ':' + S2.siradaki; eve({ tip: 'sec', kart: +el.dataset.i });
+        if (O.secimGitti === O.tur + ':' + S2.tip) return;
+        O.secimGitti = O.tur + ':' + S2.tip; eve({ tip: 'sec', kart: +el.dataset.i });
+        setTimeout(() => { if (O && O.secim === S2 && S2.aldi[O.benNo] === undefined) O.secimGitti = null; }, 700);   // başkası önce kaptıysa tekrar dene
       }; });
     }
     $('kartlar').querySelectorAll('.pk').forEach(el => {
       const k = S.kartlar[+el.dataset.i], alan = k.alan !== null && k.alan !== undefined;
-      el.classList.toggle('alindi', alan); el.classList.toggle('secilebilir', !alan && benimSiram);
-      el.dataset.alan = alan ? ad(k.alan) : '';
-      if (alan) el.style.setProperty('--alan', renkHex(O.oyuncular[k.alan].renk));
+      el.classList.toggle('gitti', alan); el.classList.toggle('secilebilir', !alan && benimSiram);
     });
   }
+
+  // ---------- Kart seçerken herkesin faresi ----------
+  const fareler = new Map();   // no → { el, x, y, hx, hy }
+  function fareAyarla(no, x, y, ani) {
+    let f = fareler.get(no);
+    if (!f) {
+      const p = O.oyuncular[no]; if (!p) return;
+      const el = document.createElement('div'); el.className = 'fare';
+      el.innerHTML = `<svg viewBox="0 0 24 24" width="30" height="30"><path d="M3 2 L3 20 L8 15 L11.5 22 L14.5 20.5 L11 14 L18 14 Z" fill="${renkHex(p.renk)}" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg><span style="background:${renkHex(p.renk)}">${kacis(p.ad)}</span>`;
+      $('fareler')?.appendChild(el);
+      f = { el, x, y, hx: x, hy: y }; fareler.set(no, f);
+    }
+    f.hx = x; f.hy = y; if (ani) { f.x = x; f.y = y; }
+  }
+  function kartMerkez(i) {
+    const kap = $('kartlar').getBoundingClientRect(), el = $('kartlar').querySelector(`.pk[data-i="${i}"]`);
+    if (!el || !kap.width) return { x: 0.5, y: 0.5 };
+    const r = el.getBoundingClientRect();
+    return { x: (r.left + r.width * (0.35 + Math.random() * 0.3) - kap.left) / kap.width, y: (r.top + r.height * (0.4 + Math.random() * 0.3) - kap.top) / kap.height };
+  }
+  const botFare = {};
+  function fareKare(dt) {
+    const secimde = O && O.faz === 'secim';
+    $('fareler')?.classList.toggle('gizli', !secimde);
+    if (!secimde) return;
+    // botların faresi kartların üstünde gezinir
+    O.oyuncular.forEach(p => {
+      if (!p.bot || O.cikti.has(p.no)) return;
+      const b = botFare[p.no] ||= { t: 0 };
+      b.t -= dt;
+      if (b.t <= 0) {
+        const bos = O.secim.kartlar.map((k, i) => (k.alan === null || k.alan === undefined ? i : -1)).filter(i => i >= 0);
+        const almadi = O.secim.aldi[p.no] === undefined;
+        if (bos.length) { const m = kartMerkez(bos[Math.floor(Math.random() * bos.length)]); fareAyarla(p.no, m.x, m.y + (almadi ? 0 : 0.45 + Math.random() * 0.3)); }
+        b.t = almadi ? 0.35 + Math.random() * 0.35 : 0.9 + Math.random() * 1.2;
+      }
+    });
+    const k = 1 - Math.exp(-dt * 9);
+    fareler.forEach(f => { f.x += (f.hx - f.x) * k; f.y += (f.hy - f.y) * k; f.el.style.left = (f.x * 100) + '%'; f.el.style.top = (f.y * 100) + '%'; });
+  }
+  let sonFare = 0;
+  addEventListener('pointermove', e => {
+    if (!O || O.faz !== 'secim' || performance.now() - sonFare < 80) return;
+    const kap = $('kartlar').getBoundingClientRect(); if (!kap.width) return;
+    sonFare = performance.now();
+    eve({ tip: 'fare', x: +((e.clientX - kap.left) / kap.width).toFixed(3), y: +((e.clientY - kap.top) / kap.height).toFixed(3) });
+  });
+
+  // ---------- Yol koyma ----------
+  function benimYolum() { const t = O?.yolEl?.[O.benNo]; if (!t) return null; return O.yolAyna && Dunya.YOLLAR[t].ayna ? Dunya.YOLLAR[t].ayna : t; }
+  function yolPanelCiz() {
+    const t = benimYolum();
+    if (!t) { $('yolResim').removeAttribute('src'); $('yolDurum').textContent = 'Bu turda yolun yok. Diğerlerini izle.'; $('yolEkleBtn').disabled = true; $('yolCevirBtn').classList.add('gizli'); return; }
+    $('yolResim').src = Sahne.kartResmi('yol', t);
+    $('yolCevirBtn').classList.toggle('gizli', !Dunya.YOLLAR[O.yolEl[O.benNo]].ayna || O.yolKoydum);
+    $('yolEkleBtn').disabled = O.yolKoydum;
+    $('yolDurum').textContent = O.yolKoydum ? '✅ Yolun eklendi!' : 'Kim önce eklerse pist onun yoluyla devam eder!';
+  }
+  function yolHayaletGuncelle() { Sahne.yolHayalet(O.faz === 'yolKoy' && !O.yolKoydum ? O.dizi : null, benimYolum()); }
+  function yolEkle() { if (!O || O.faz !== 'yolKoy' || O.yolKoydum || !benimYolum()) return; O.yolKoydum = true; Sahne.yolHayalet(null); eve({ tip: 'yolKoy', ayna: O.yolAyna }); yolPanelCiz(); }
+  function yolCevir() { if (!O || O.faz !== 'yolKoy' || O.yolKoydum) return; O.yolAyna = !O.yolAyna; Ses.don(); yolPanelCiz(); yolHayaletGuncelle(); }
+  $('yolEkleBtn').onclick = yolEkle;
+  $('yolCevirBtn').onclick = yolCevir;
 
   // ---------- Yerleştirme ----------
   function yerlestirPanelCiz() {
@@ -423,36 +498,55 @@ const Oyun = (() => {
     if (Y.imlecBekliyor && performance.now() - sonImlec > 120) { Y.imlecBekliyor = false; sonImlec = performance.now(); eve({ tip: 'imlec', x: Y.x, y: Y.y, z: Y.z, r: Y.r }); }
     Sahne.hayaletAyarla(tur, Y.x, Y.y, Y.z, Y.r, !Y.hata);
     if (Y.hedefler?.length) Sahne.vurgula(Y.hedefler);
-    $('ipucu').textContent = Y.hata ? '❌ ' + Y.hata : (dokun ? '' : 'Tıkla: koy · Sürükle: kaydır · Tekerlek: yakınlaş · R / sağ tık: döndür');
+    $('ipucu').textContent = Y.hata ? '❌ ' + Y.hata : (dokun ? '' : 'Tıkla: koy · Sol sürükle: döndür · Sağ sürükle: kaydır · Tekerlek: yakınlaş · R: tuzağı çevir');
   }
-  // Fare / parmak: sürükleyince kamera kayar, kısa dokununca seçilir
+  // Fare / parmak: sol sürükle = döndür (360°), sağ sürükle / iki parmak = kaydır, tekerlek / iki parmak sıkıştır = yaklaş.
+  // Kısa tıklama tuzağı koyar, kısa sağ tık çevirir.
   const kanvas = $('sahne');
-  let surukle = null;
+  const parmaklar = new Map();
+  let surukle = null, ikiParmak = null;
+  const kameraSerbest = () => O && O.faz !== 'yaris';
   kanvas.addEventListener('pointerdown', e => {
     Ses.baslat();
-    if (!O || (O.faz !== 'yerlestir' && O.faz !== 'insa')) return;
-    surukle = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, buton: e.button, tip: e.pointerType, kaydi: false };
+    if (!kameraSerbest()) return;
+    parmaklar.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { kanvas.setPointerCapture(e.pointerId); } catch (x) { }
+    if (parmaklar.size === 2) { const [a, b] = [...parmaklar.values()]; ikiParmak = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; if (surukle) surukle.kaydi = true; return; }
+    surukle = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, buton: e.button, tip: e.pointerType, kaydi: false };
   });
   kanvas.addEventListener('pointermove', e => {
+    if (parmaklar.has(e.pointerId)) parmaklar.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (ikiParmak && parmaklar.size >= 2) {
+      const [a, b] = [...parmaklar.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y);
+      const k = Sahne.ekranKaydirma(mx - ikiParmak.mx, my - ikiParmak.my); Sahne.kameraKaydir(k.dx, k.dz);
+      if (ikiParmak.d > 10 && d > 10) Sahne.kameraYakinlas(d / ikiParmak.d);
+      Object.assign(ikiParmak, { mx, my, d });
+      return;
+    }
     if (surukle) {
       const dx = e.clientX - surukle.x, dy = e.clientY - surukle.y;
       if (Math.hypot(e.clientX - surukle.sx, e.clientY - surukle.sy) > 7) surukle.kaydi = true;
-      if (surukle.kaydi) { const k = Sahne.ekranKaydirma(dx, dy); Sahne.kameraKaydir(k.dx, k.dz); }
+      if (surukle.kaydi) {
+        if (surukle.buton === 2) { const k = Sahne.ekranKaydirma(dx, dy); Sahne.kameraKaydir(k.dx, k.dz); }
+        else Sahne.kameraDondur(dx, dy);
+      }
       surukle.x = e.clientX; surukle.y = e.clientY;
     }
     if (e.pointerType !== 'touch' && yerlestiriyorum() && !(surukle && surukle.kaydi)) yerAyarla(e.clientX, e.clientY);
   });
-  kanvas.addEventListener('pointerup', e => {
-    const s = surukle; surukle = null;
-    if (!s || s.kaydi || !yerlestiriyorum()) return;
+  const birak = e => {
+    parmaklar.delete(e.pointerId);
+    if (parmaklar.size < 2) ikiParmak = null;
+    const s = surukle; if (parmaklar.size === 0) surukle = null;
+    if (e.type !== 'pointerup' || !s || s.kaydi || !yerlestiriyorum()) return;
     if (s.buton === 2) { dondur(1); return; }
     yerAyarla(e.clientX, e.clientY);
     if (s.tip !== 'touch') koyDene();
-  });
-  kanvas.addEventListener('pointercancel', () => { surukle = null; });
+  };
+  kanvas.addEventListener('pointerup', birak);
+  kanvas.addEventListener('pointercancel', birak);
   kanvas.addEventListener('contextmenu', e => e.preventDefault());
-  kanvas.addEventListener('wheel', e => { if (O && (O.faz === 'yerlestir' || O.faz === 'insa' || O.faz === 'secim')) { e.preventDefault(); Sahne.kameraYakinlas(e.deltaY > 0 ? 0.88 : 1.14); } }, { passive: false });
+  kanvas.addEventListener('wheel', e => { if (kameraSerbest()) { e.preventDefault(); Sahne.kameraYakinlas(e.deltaY > 0 ? 0.88 : 1.14); } }, { passive: false });
   $('donBtn').onclick = () => dondur(1);
   $('koyBtn').onclick = koyDene;
   $('yakinBtn').onclick = () => Sahne.kameraYakinlas(1.3);
@@ -468,7 +562,8 @@ const Oyun = (() => {
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
     if (!e.repeat) {
       if (k === ' ') nitroBasildi = true;
-      if (k === 'r') { if (O?.faz === 'yerlestir') dondur(1); else kurtarBasildi = true; }
+      if (k === 'r') { if (O?.faz === 'yerlestir') dondur(1); else if (O?.faz === 'yolKoy') yolCevir(); else kurtarBasildi = true; }
+      if ((k === 'enter' || k === ' ') && O?.faz === 'yolKoy') yolEkle();
       if (k === 'q' && O?.faz === 'yerlestir') dondur(-1);
       if (k === 'm') mikDegistir();
     }
@@ -509,7 +604,7 @@ const Oyun = (() => {
       if (p.no === O.benNo) {
         O.ben = Dunya.yeniAraba(y.x, y.y || 0, y.z, y.a); if (otopilot) otopilot = {};
         const g = m.guc?.[p.no] || {};
-        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = (g.nitro || 0) * 3;
+        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = 1 + (g.nitro || 0) * 3;
       }
     });
     if (O.ben) Sahne.kameraTakip(O.ben, true);
@@ -666,9 +761,10 @@ const Oyun = (() => {
   let son = performance.now(), elleSur = false;
   function kare(dt) {
     if (O) {
+      fareKare(dt);
       if (O.faz === 'yerlestir') yerlestirKare();
       else if (O.faz === 'yaris') yarisKare(dt);
-      if (O.faz === 'secim' || O.faz === 'yerlestir' || O.faz === 'puan') {
+      if (O.faz === 'secim' || O.faz === 'yerlestir' || O.faz === 'yolKoy' || O.faz === 'puan') {
         const kalan = Math.max(0, (O.fazSon - performance.now()) / 1000);
         $('sayac').textContent = O.faz === 'puan' ? '' : Math.ceil(kalan);
         $('sayac').classList.toggle('az', kalan < 5 && O.faz !== 'puan');
@@ -690,6 +786,7 @@ const Oyun = (() => {
     kare(ms = 16, n = 1) { elleSur = true; for (let i = 0; i < n; i++) kare(ms / 1000); return Oyun.durum(); },
     serbest() { elleSur = false; },
     durum() { return O ? { faz: O.faz, tur: O.tur, benNo: O.benNo, puan: O.puan, parca: O.parcalar.length, ben: O.ben && { x: +O.ben.x.toFixed(1), z: +O.ben.z.toFixed(1), y: +O.ben.y.toFixed(1), bitti: O.ben.bitti }, el: O.el[O.benNo], yarisT: O.yarisT } : { mod }; },
+    yolEkle: () => yolEkle(),
     otopilot(v = true) { otopilot = v ? {} : null; },
     tusBas(k, v = true) { if (v) tus.add(k); else tus.delete(k); },
     yerSec(x, z, r = 0) { if (O) { O.yer.x = x; O.yer.z = z; O.yer.r = r; O.yer.degisti = true; } },

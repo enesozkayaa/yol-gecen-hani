@@ -8,7 +8,7 @@ const Sahne = (() => {
   const RENKLER = [0xe8413a, 0x2f7de1, 0xf2c12e, 0x34b45a, 0x9a4ae0, 0xff8a1e];
   const RENK_AD = ['Kırmızı', 'Mavi', 'Sarı', 'Yeşil', 'Mor', 'Turuncu'];
   let renderer, scene, camera, gunes, hemi;
-  const kam = { x: 0, y: 40, z: 40, hx: 0, hy: 0, hz: 0, sars: 0, mod: 'genel', hedef: null, yaw: 0, odak: { x: 30, y: 0, z: 0 }, uzak: 80, kayX: 0, kayZ: 0, yakin: 1 };
+  const kam = { gYaw: Math.PI / 2, gPitch: 0.9, x: 0, y: 40, z: 40, hx: 0, hy: 0, hz: 0, sars: 0, mod: 'genel', hedef: null, yaw: 0, odak: { x: 30, y: 0, z: 0 }, uzak: 80, kayX: 0, kayZ: 0, yakin: 1 };
   const parcaG = new Map();
   let ortamG = null, yolG = null, hayalet = null, hayaletTur = null;
   let yolMeshler = [];
@@ -171,59 +171,101 @@ const Sahne = (() => {
     g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2)); g.setIndex(I); g.computeVertexNormals();
     return g;
   }
+  let YM = null;
+  function yolMalzeme() {
+    if (!YM) YM = {
+      asfalt: new THREE.MeshStandardMaterial({ map: DOKU.asfalt, roughness: 0.85 }),
+      rampa: new THREE.MeshStandardMaterial({ map: DOKU.rampa, roughness: 0.6 }),
+      beton: new THREE.MeshStandardMaterial({ map: DOKU.beton, roughness: 0.95 }),
+      bordur: new THREE.MeshStandardMaterial({ map: DOKU.bordur, roughness: 0.7 }),
+      celik: new THREE.MeshStandardMaterial({ color: 0xc4c8d0, metalness: 0.85, roughness: 0.3 }),
+    };
+    return YM;
+  }
+  // Bir yol parçasını (segment) g grubuna çiz: asfalt şerit, rampa, bordür, direkler
+  function segmentCiz(g, C, si, tabanY, meshler) {
+    const { asfalt: asfaltM, rampa: rampaM, beton: betonM, bordur: bordurM } = yolMalzeme();
+    const idx = []; C.forEach((p, i) => { if (p.si === si) idx.push(i); });
+    if (!idx.length) return null;
+    const son = idx[idx.length - 1] + 1;
+    if (son < C.length) idx.push(son);
+    let kos = [];
+    const kapat = (rampaMi) => {
+      if (kos.length < 2) return;
+      const pts = kos.map(i => C[i]);
+      const m = new THREE.Mesh(seritGeo(pts, null, 0.7, 0), rampaMi ? rampaM : asfaltM);
+      m.castShadow = true; m.receiveShadow = true; g.add(m); if (meshler) meshler.push(m);
+      if (pts.some(p => p.viraj)) for (const s of [-1, 1]) {
+        const kb = pts.map(p => ({ ...p, x: p.x - Math.sin(p.a) * (p.w / 2 - 0.35) * s, z: p.z + Math.cos(p.a) * (p.w / 2 - 0.35) * s, w: 0.7 }));
+        const b = new THREE.Mesh(seritGeo(kb, null, 0.12, 0.06, 2), bordurM); b.receiveShadow = true; g.add(b);
+      }
+      pts.forEach((p, k) => {
+        if ((kos[k] % 11) !== 3) return;
+        const h = p.y - 0.7 - tabanY; if (h < 1) return;
+        const dr = silindir(0.55, 0.75, h, betonM, 10); dr.position.set(p.x, tabanY + h / 2, p.z); g.add(dr);
+        const bas = kutu(1.4, 0.5, p.w * 0.6, betonM, p.x, p.y - 0.95, p.z); bas.rotation.y = -p.a; g.add(bas);
+      });
+    };
+    let kosRampa = null;
+    idx.forEach(i => {
+      const p = C[i];
+      if (p.bosluk) { if (kos.length) { kos.push(i); kapat(kosRampa); } kos = []; kosRampa = null; return; }
+      const r = !!p.rampa;
+      if (kos.length && r !== kosRampa) { kos.push(i); kapat(kosRampa); kos = [i]; kosRampa = r; return; }
+      if (!kos.length) kosRampa = r;
+      kos.push(i);
+    });
+    if (kos.length) kapat(kosRampa);
+    return idx;
+  }
+  // Yol kenarı çelik korkulukları (tek seferde, InstancedMesh)
+  function korkulukCiz(liste, hedef) {
+    if (!liste.length) return;
+    const { celik } = yolMalzeme();
+    const ray = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.34, 0.1), celik, liste.length);
+    const direk = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.8, 0.12), celik, liste.length);
+    const o = new THREE.Object3D();
+    liste.forEach((k, i) => {
+      o.position.set(k.x, k.y + 0.62, k.z); o.rotation.set(0, -k.a, Math.atan2(k.dy || 0, k.L)); o.scale.set(k.L + 0.04, 1, 1); o.updateMatrix(); ray.setMatrixAt(i, o.matrix);
+      o.position.set(k.x, k.y + 0.4, k.z); o.rotation.set(0, -k.a, 0); o.scale.set(1, 1, 1); o.updateMatrix(); direk.setMatrixAt(i, o.matrix);
+    });
+    ray.castShadow = true; direk.castShadow = true;
+    hedef.add(ray, direk);
+  }
+  // Pistin ucunda, eklenecek yolun yarı saydam önizlemesi
+  let yolHayaletG = null;
+  const hayaletYolM = new THREE.MeshBasicMaterial({ color: 0x5aff7a, transparent: true, opacity: 0.45, depthWrite: false });
+  function yolHayalet(dizi, tur) {
+    if (yolHayaletG) { scene.remove(yolHayaletG); yolHayaletG = null; }
+    if (!dizi || !tur) return;
+    const ekler = Dunya.uygunYol(dizi, tur).ekler;
+    const Y = Dunya.yolKur([...dizi, ...ekler]);
+    yolHayaletG = new THREE.Group();
+    for (let si = 1 + dizi.length; si < 1 + dizi.length + ekler.length; si++) segmentCiz(yolHayaletG, Y.cizgi, si, ZY(), null);
+    yolHayaletG.traverse(o => { if (o.isMesh) { o.material = hayaletYolM; o.castShadow = false; } });
+    yolHayaletG.position.y = 0.05;
+    scene.add(yolHayaletG);
+    const t0 = zaman;
+    animasyonlar.push({ son: zaman + 0.4, f: k => { if (yolHayaletG) hayaletYolM.opacity = 0.2 + 0.25 * k; } });
+    void t0;
+  }
   // d: dunya. yeniSi: animasyonla gelecek segment numaraları
   function yolGuncelle(d, yeniSi = []) {
     sonDunya = d;
     if (yolG) scene.remove(yolG);
     yolG = new THREE.Group(); scene.add(yolG); yolMeshler = [];
     const C = d.cizgi, S = d.yol.segmentler;
-    const asfaltM = new THREE.MeshStandardMaterial({ map: DOKU.asfalt, roughness: 0.85 });
-    const rampaM = new THREE.MeshStandardMaterial({ map: DOKU.rampa, roughness: 0.6 });
-    const betonM = new THREE.MeshStandardMaterial({ map: DOKU.beton, roughness: 0.95 });
-    const bordurM = new THREE.MeshStandardMaterial({ map: DOKU.bordur, roughness: 0.7 });
     S.forEach((seg, si) => {
       const g = new THREE.Group(); yolG.add(g);
-      // segment noktaları + bir sonraki ilk nokta (ek yeri kapansın)
-      const idx = []; C.forEach((p, i) => { if (p.si === si) idx.push(i); });
-      if (!idx.length) return;
-      const son = idx[idx.length - 1] + 1;
-      if (son < C.length) idx.push(son);
-      // boşluksuz parçalara böl
-      let kos = [];
-      const kapat = (rampaMi) => {
-        if (kos.length < 2) return;
-        const pts = kos.map(i => C[i]);
-        const m = new THREE.Mesh(seritGeo(pts, null, 0.7, 0), rampaMi ? rampaM : asfaltM);
-        m.castShadow = true; m.receiveShadow = true; g.add(m); yolMeshler.push(m);
-        // virajlarda kırmızı-beyaz bordür
-        if (pts.some(p => p.viraj)) for (const s of [-1, 1]) {
-          const kb = pts.map(p => ({ ...p, x: p.x - Math.sin(p.a) * (p.w / 2 - 0.35) * s, z: p.z + Math.cos(p.a) * (p.w / 2 - 0.35) * s, w: 0.7 }));
-          const b = new THREE.Mesh(seritGeo(kb, null, 0.12, 0.06, 2), bordurM); b.receiveShadow = true; g.add(b);
-        }
-        // direkler
-        pts.forEach((p, k) => {
-          if ((kos[k] % 11) !== 3) return;
-          const h = p.y - 0.7 - ZY(); if (h < 1) return;
-          const dr = silindir(0.55, 0.75, h, betonM, 10); dr.position.set(p.x, ZY() + h / 2, p.z); g.add(dr);
-          const bas = kutu(1.4, 0.5, p.w * 0.6, betonM, p.x, p.y - 0.95, p.z); bas.rotation.y = -p.a; g.add(bas);
-        });
-      };
-      let kosRampa = null;
-      idx.forEach(i => {
-        const p = C[i];
-        if (p.bosluk) { if (kos.length) { kos.push(i); kapat(kosRampa); } kos = []; kosRampa = null; return; }
-        const r = !!p.rampa;
-        if (kos.length && r !== kosRampa) { kos.push(i); kapat(kosRampa); kos = [i]; kosRampa = r; return; }
-        if (!kos.length) kosRampa = r;
-        kos.push(i);
-      });
-      if (kos.length) kapat(kosRampa);
+      const idx = segmentCiz(g, C, si, ZY(), yolMeshler);
+      if (!idx) return;
       // yeni gelen segment: aşağıdan yükselsin
       if (yeniSi.includes(si)) {
         g.position.y = -12; g.scale.set(1, 0.2, 1);
         animasyonlar.push({ son: zaman + 0.9, f: k => { const e = 1 - Math.pow(1 - k, 3); g.position.y = -12 * (1 - e); g.scale.y = 0.2 + 0.8 * e; }, bitis: () => { g.position.y = 0; g.scale.y = 1; const p = C[idx[Math.floor(idx.length / 2)]]; toz(p.x, p.y + 0.2, p.z, 30, 0xd8d0c0, 4); } });
       }
     });
+    korkulukCiz(d.yol.korkuluk, yolG);
     // başlangıç kapısı ve dizilim çizgileri
     const b0 = C[0];
     const kapi = (p, yazi, renk) => {
@@ -569,6 +611,8 @@ const Sahne = (() => {
     kameraGenel({ x: k.cx, y: k.y1 * 0.4, z: k.cz }, Math.max(30, yx / (tanH * camera.aspect), yz * 1.35 / tanH) * 1.05);
   }
   function kameraKaydir(dx, dz) { kam.kayX += dx; kam.kayZ += dz; }
+  // Fareyle döndür: sağa sola 360°, yukarı aşağı eğim
+  function kameraDondur(dx, dy) { kam.gYaw -= dx * 0.007; kam.gPitch = Math.max(0.2, Math.min(1.45, kam.gPitch + dy * 0.005)); }
   function kameraYakinlas(k) { kam.yakin = Math.max(0.25, Math.min(2.5, kam.yakin * k)); }
   function kameraTakip(hedef, ani) { kam.mod = 'takip'; kam.hedef = hedef; if (ani) { kam.yaw = hedef.a; kam.ani = true; } }
   function kameraGuncelle(dt) {
@@ -588,7 +632,7 @@ const Sahne = (() => {
     } else {
       const D = kam.uzak / kam.yakin;
       hx = kam.odak.x + kam.kayX; hy = kam.odak.y; hz = kam.odak.z + kam.kayZ;
-      cx = hx - D * 0.05; cy = hy + D * 0.78; cz = hz + D * 0.62;
+      cx = hx + D * Math.cos(kam.gPitch) * Math.cos(kam.gYaw); cy = hy + D * Math.sin(kam.gPitch); cz = hz + D * Math.cos(kam.gPitch) * Math.sin(kam.gYaw);
     }
     const k = kam.ani ? 1 : 1 - Math.exp(-dt * hiz); kam.ani = false;
     if (![kam.x, kam.y, kam.z, kam.hx, kam.hy, kam.hz].every(Number.isFinite)) Object.assign(kam, { x: cx, y: cy, z: cz, hx, hy, hz });
@@ -615,7 +659,85 @@ const Sahne = (() => {
   // Ekranda sürükleme → yerde kaydırma miktarı
   function ekranKaydirma(dxPx, dyPx) {
     const D = kam.uzak / kam.yakin, olcek = D * Math.tan(camera.fov * Math.PI / 360) * 2 / innerHeight;
-    return { dx: -dxPx * olcek, dz: -dyPx * olcek * 1.25 };
+    const fx = -Math.cos(kam.gYaw), fz = -Math.sin(kam.gYaw), sx = -fz, sz = fx;   // ileri ve sağ (yerde)
+    return { dx: -sx * dxPx * olcek + fx * dyPx * olcek * 1.25, dz: -sz * dxPx * olcek + fz * dyPx * olcek * 1.25 };
+  }
+
+  // ---------- Kart resimleri ----------
+  let kartR = null, kartSahne = null, kartKam = null;
+  const kartOnbellek = new Map();
+  function simgeYap(tur) {   // haritaya konmayan kartlar için küçük 3D simgeler
+    const g = new THREE.Group();
+    if (tur === 'kalkan') {
+      const s = new THREE.Shape(); s.moveTo(0, 1.4); s.quadraticCurveTo(1.2, 1.3, 1.25, 0.9); s.quadraticCurveTo(1.2, -0.6, 0, -1.4); s.quadraticCurveTo(-1.2, -0.6, -1.25, 0.9); s.quadraticCurveTo(-1.2, 1.3, 0, 1.4);
+      const m = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.3, bevelEnabled: true, bevelSize: 0.12, bevelThickness: 0.12 }), mat(0x2a8ae8, { m: 0.5, p: 0.3, e: 0x1a4a9a, ei: 0.4 }));
+      m.position.y = 1.6; g.add(m);
+      const ic = new THREE.Mesh(new THREE.ExtrudeGeometry(s, { depth: 0.1, bevelEnabled: false }), mat(0xe8eef8, { m: 0.6, p: 0.3 })); ic.scale.setScalar(0.55); ic.position.set(0, 1.6, 0.45); g.add(ic);
+    } else if (tur === 'nitro') {
+      const sise = silindir(0.6, 0.6, 2, mat(0x2a6ad8, { m: 0.7, p: 0.25 }), 20); sise.position.y = 1.2; sise.rotation.z = -0.5; g.add(sise);
+      const bas = silindir(0.25, 0.4, 0.5, mat(0xc8ccd4, { m: 0.9, p: 0.2 }), 14); bas.position.set(0.62, 2.35, 0); bas.rotation.z = -0.5; g.add(bas);
+      const alev = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.8, 14), new THREE.MeshBasicMaterial({ color: 0x5ab0ff })); alev.position.set(-0.8, 0.0, 0); alev.rotation.z = -0.5 + Math.PI; g.add(alev);
+      const alev2 = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.2, 12), new THREE.MeshBasicMaterial({ color: 0xffe06a })); alev2.position.set(-0.7, 0.2, 0.1); alev2.rotation.z = -0.5 + Math.PI; g.add(alev2);
+    } else if (tur === 'silgi') {
+      const m = mat(0xc8ccd4, { m: 0.9, p: 0.25 });
+      const sap = kutu(0.45, 3, 0.25, m, 0, 1.5, 0); sap.rotation.z = 0.6; g.add(sap);
+      const bas = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.22, 10, 20, Math.PI * 1.5), m); bas.position.set(-0.9, 2.8, 0); bas.rotation.z = 1.2; g.add(bas);
+      const tut = kutu(0.5, 1.2, 0.3, mat(0xe8413a, { p: 0.5 }), 0.75, 0.45, 0); tut.rotation.z = 0.6; g.add(tut);
+    } else if (tur === 'bomba') {
+      const top = new THREE.Mesh(new THREE.SphereGeometry(1.2, 24, 18), mat(0x1a1a20, { m: 0.6, p: 0.35 })); top.position.y = 1.3; g.add(top);
+      const ag = silindir(0.35, 0.35, 0.4, mat(0x888888, { m: 0.8 }), 12); ag.position.y = 2.55; g.add(ag);
+      const fitil = silindir(0.06, 0.06, 0.7, mat(0xc8a070), 6); fitil.position.set(0.2, 2.95, 0); fitil.rotation.z = -0.5; g.add(fitil);
+      const k = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd040 })); k.position.set(0.42, 3.3, 0); g.add(k);
+    }
+    return g;
+  }
+  function kartResmi(tip, tur) {
+    const anahtar = tip + ':' + tur;
+    if (kartOnbellek.has(anahtar)) return kartOnbellek.get(anahtar);
+    if (!kartR) {
+      kartR = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      kartR.setSize(256, 256); kartR.setPixelRatio(1);
+      kartR.outputColorSpace = THREE.SRGBColorSpace; kartR.toneMapping = THREE.ACESFilmicToneMapping;
+      kartSahne = new THREE.Scene();
+      kartSahne.add(new THREE.HemisphereLight(0xffffff, 0x8a8a7a, 1.6));
+      const gl = new THREE.DirectionalLight(0xffffff, 2.2); gl.position.set(5, 10, 7); kartSahne.add(gl);
+      kartKam = new THREE.PerspectiveCamera(32, 1, 0.1, 500);
+    }
+    const g = new THREE.Group(); kartSahne.add(g);
+    if (tip === 'yol') {
+      const Y = Dunya.yolKur([tur]);
+      const C = Y.cizgi.map(p => ({ ...p }));
+      const ic = new THREE.Group(); g.add(ic);
+      const yMin = Math.min(...C.filter(p => p.si === 1).map(p => p.y));
+      segmentCiz(ic, C, 1, yMin - 2.5, null);
+      // giriş oku
+      const p0 = C.find(p => p.si === 1);
+      const ok = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.6, 3), new THREE.MeshBasicMaterial({ color: 0x3ae86a }));
+      ok.rotation.set(0, 0, -Math.PI / 2); ok.position.set(p0.x - 2.2, p0.y + 0.3, p0.z); ic.add(ok);
+      ic.rotation.y = Math.PI / 2;   // pist aşağıdan yukarı doğru gitsin
+    } else {
+      const T = Dunya.TURLER[tur];
+      if (T.kisisel || tur === 'silgi' || tur === 'bomba') g.add(simgeYap(tur));
+      else {
+        const o = parcaYap({ tur, x: 0, y: 0, z: 0, r: 0, id: 'kart' + tur });
+        if (o.anim) o.anim(0.7);
+        g.add(o.g);
+        const zemin = kutu(tur === 'cekic' ? 9 : 7, 0.3, 7, yolMalzeme().asfalt, 0, -0.16, 0, false); g.add(zemin);
+      }
+      g.rotation.y = 0.5;
+    }
+    // çerçevele
+    const kutuB = new THREE.Box3().setFromObject(g), boy = new THREE.Vector3(), merkez = new THREE.Vector3();
+    kutuB.getSize(boy); kutuB.getCenter(merkez);
+    const r = Math.max(boy.x, boy.y, boy.z) * 0.62;
+    const D = r / Math.tan(kartKam.fov * Math.PI / 360) * 1.05;
+    const yon = tip === 'yol' ? new THREE.Vector3(0, 0.85, 0.53).normalize() : new THREE.Vector3(0.15, 0.5, 0.85).normalize();
+    kartKam.position.copy(merkez).addScaledVector(yon, D); kartKam.lookAt(merkez);
+    kartR.render(kartSahne, kartKam);
+    const url = kartR.domElement.toDataURL('image/png');
+    kartSahne.remove(g);
+    kartOnbellek.set(anahtar, url);
+    return url;
   }
 
   // ---------- Kare ----------
@@ -640,7 +762,7 @@ const Sahne = (() => {
   return {
     RENKLER, RENK_AD, kur, ortamKur, yolGuncelle, yolKutusu, parcaEkle, parcaSil, parcalariTemizle, mayinDurum, yayBas, hayaletAyarla, vurgula, imlecAyarla, imlecleriTemizle,
     arabaYap, arabaGuncelle, arabaSil, etiketYap, dunyaAyarla, toz, kivilcim, poof, patlama, konfeti, halkaEfekt, sarsinti, parcacik,
-    kameraGenel, kameraPistiGoster, kameraKaydir, kameraYakinlas, kameraTakip, ekrandanYola, ekranKaydirma, ciz,
+    kartResmi, yolHayalet, kameraDondur, kameraGenel, kameraPistiGoster, kameraKaydir, kameraYakinlas, kameraTakip, ekrandanYola, ekranKaydirma, ciz,
     get scene() { return scene; }, get camera() { return camera; },
   };
 })();

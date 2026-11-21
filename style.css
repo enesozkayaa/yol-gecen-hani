@@ -68,23 +68,31 @@ label { font-weight: 800; font-size: 14px; }
 #ipucu:empty { display: none; }
 body.dokun #ipucu.surus { display: none; }
 
-/* Kartlar */
-#kartPanel { position: absolute; left: 0; right: 0; bottom: max(8px, env(safe-area-inset-bottom)); display: grid; justify-items: center; gap: 6px; pointer-events: none; }
-#kartBaslik { font-family: 'Lilita One', sans-serif; font-size: 22px; background: #000a; padding: 2px 14px; border-radius: 10px; }
+/* Kartlar: ekranın ortasında, büyük, sadece resim */
+#kartPanel { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; pointer-events: none; padding: 60px 8px 20px; }
+#kartBaslik { font-family: 'Lilita One', sans-serif; font-size: 24px; background: #000a; padding: 3px 16px; border-radius: 12px; }
 #kartBaslik.sende { color: #ffe24a; animation: yanson .6s infinite alternate; }
-#kartlar { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; padding: 10px 8px 4px; max-width: 100vw; pointer-events: auto; }
-.pk { position: relative; width: 128px; min-width: 104px; background: #fffaf0; color: #1a2440; text-shadow: none; border-radius: 14px; border: 4px solid var(--k); padding: 8px 6px 6px; display: grid; justify-items: center; gap: 2px; box-shadow: 0 6px 0 #0006, 0 0 0 2px #0003; cursor: pointer; transition: transform .15s; animation: kartGel .35s backwards; text-align: center; }
+#kartlar { position: relative; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; max-width: min(1100px, 96vw); pointer-events: auto; padding: 8px; }
+.pk { position: relative; width: clamp(104px, 17vw, 200px); aspect-ratio: 1; border-radius: 20px; background: radial-gradient(circle at 50% 40%, #ffffff, #dfe8f4); border: 5px solid var(--k); box-shadow: 0 8px 0 #0006, 0 0 0 3px #fff8; cursor: default; animation: kartGel .4s backwards; transition: transform .15s; overflow: hidden; }
+.pk img { width: 100%; height: 100%; object-fit: contain; display: block; pointer-events: none; -webkit-user-drag: none; user-select: none; }
 .pk:nth-child(2) { animation-delay: .06s; } .pk:nth-child(3) { animation-delay: .12s; } .pk:nth-child(4) { animation-delay: .18s; } .pk:nth-child(5) { animation-delay: .24s; } .pk:nth-child(6) { animation-delay: .3s; } .pk:nth-child(7) { animation-delay: .36s; }
-@keyframes kartGel { from { transform: translateY(80px) rotate(8deg); opacity: 0; } }
-.pk.secilebilir:hover { transform: translateY(-8px) scale(1.04); }
-.pk .em { font-size: 40px; line-height: 1.1; }
-.pk b { font-size: 14px; line-height: 1.1; }
-.pk small { font-size: 11px; line-height: 1.2; opacity: .8; font-weight: 700; }
-.pk .kat { font-size: 10px; font-weight: 900; color: #fff; background: var(--k); border-radius: 6px; padding: 0 5px; }
-.pk.alindi { cursor: default; filter: saturate(.3) brightness(.8); transform: scale(.92); }
-.pk.alindi::after { content: attr(data-alan); position: absolute; inset: 0; display: grid; place-items: center; font-family: 'Lilita One', sans-serif; font-size: 18px; color: #fff; background: color-mix(in srgb, var(--alan) 75%, transparent); border-radius: 10px; text-shadow: 0 2px 3px #000; padding: 4px; }
-.pk:not(.secilebilir):not(.alindi) { cursor: default; }
-body.dokun .pk { width: 104px; } body.dokun .pk small { display: none; }
+@keyframes kartGel { from { transform: translateY(60px) scale(.6) rotate(8deg); opacity: 0; } }
+.pk.secilebilir { cursor: pointer; box-shadow: 0 8px 0 #0006, 0 0 0 4px #ffe24a, 0 0 24px #ffe24a88; }
+.pk.secilebilir:hover { transform: translateY(-8px) scale(1.06); }
+.pk.gitti { animation: kartGit .45s forwards; pointer-events: none; }
+@keyframes kartGit { 40% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(.1) translateY(-80px); opacity: 0; visibility: hidden; } }
+#fareler { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+.fare { position: absolute; transform: translate(-3px, -2px); filter: drop-shadow(0 2px 3px #0009); }
+.fare span { position: absolute; left: 22px; top: 22px; font-size: 12px; font-weight: 900; color: #fff; padding: 1px 6px; border-radius: 6px; white-space: nowrap; text-shadow: 0 1px 2px #0008; }
+@media (max-height: 500px) { #kartPanel { padding-top: 48px; } .pk { width: clamp(84px, 15vw, 130px); } #kartBaslik { font-size: 17px; } #kartlar { gap: 10px; } }
+
+/* Yol koyma */
+#yolPanel { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); width: min(240px, 40vw); display: grid; gap: 6px; justify-items: center; background: #000a; border-radius: 16px; padding: 10px; pointer-events: auto; }
+#yolResim { width: 100%; aspect-ratio: 1; object-fit: contain; background: radial-gradient(circle at 50% 40%, #ffffff, #dfe8f4); border-radius: 12px; border: 4px solid #3a6ad8; }
+#yolDurum { font-weight: 900; font-size: 13px; text-align: center; }
+#yolPanel .satir { width: 100%; }
+#yolPanel button { font-size: 15px; padding: 8px 6px; }
+@media (max-height: 500px) { #yolPanel { width: min(170px, 30vw); padding: 6px; } #yolDurum { font-size: 11px; } }
 
 /* Yerleştirme */
 #yerlestirPanel { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 30px); transform: translateX(-50%); display: grid; gap: 6px; justify-items: center; width: min(420px, 92vw); }
@@ -132,8 +140,6 @@ body.dokun .surus.gizli2 { display: none !important; }
   #elimde { font-size: 13px; padding: 3px 10px; } #elimde .em { font-size: 18px; } #elimde small { display: none; } #elimde small.hata { display: block; }
   #yerlestirPanel button { padding: 6px 10px; font-size: 15px; }
   body.dokun #ipucu { display: none; }
-  .pk { width: 96px; min-width: 90px; padding: 4px; } .pk .em { font-size: 28px; } .pk small { display: none; }
-  #kartBaslik { font-size: 17px; }
   #fazYazi { font-size: 17px; } #sayac { font-size: 22px; }
   #akis { width: min(220px, 36vw); } #akis div { font-size: 11px; }
   .surus button { width: 62px; height: 62px; } .surus button.buyuk { width: 78px; height: 78px; }

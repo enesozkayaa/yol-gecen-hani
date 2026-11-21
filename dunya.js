@@ -53,7 +53,7 @@ const Dunya = (() => {
     silgi:    { ad: 'Söküm',            emoji: '🔧', kat: 'fayda',  agirlik: 6, acik: 'Konmuş bir tuzağı söker.' },
     bomba:    { ad: 'Bomba',            emoji: '💣', kat: 'fayda',  agirlik: 4, acik: 'Çevresindeki bütün tuzakları patlatır.' },
     kalkan:   { ad: 'Kalkan',           emoji: '🛡️', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta ilk tuzak sana işlemez.', kisisel: true },
-    nitro:    { ad: 'Nitro',            emoji: '🔥', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta 3 kez turbo (Boşluk).', kisisel: true },
+    nitro:    { ad: 'Nitro',            emoji: '🔥', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta +3 nitro (Boşluk).', kisisel: true },
   };
   const KATLAR = {
     yol: { ad: 'Yol', renk: '#3a6ad8' }, engel: { ad: 'Engel', renk: '#e0603a' },
@@ -115,7 +115,30 @@ const Dunya = (() => {
     let bitisI = cizgi.length - 1;
     while (bitisI > 0 && cizgi[bitisI].si === segmentler.length - 1) bitisI--;
     bitisI += 5;   // bitiş çizgisi, bitiş parçasının 5. metresi
-    return { yuzey, cizgi, segmentler, bitisI, son: { ...c } };
+    // Yol kenarı korkulukları: bazı yollarda boydan boya, bazılarında yer yer, bazılarında hiç yok
+    const korkuluk = [];
+    segmentler.forEach((seg, si) => {
+      let mod;
+      if (seg.tur === 'baslangic' || seg.tur === 'bitis') mod = 'tam';
+      else if (seg.tur === 'dar') mod = 'yok';
+      else { const h = karma('k' + si + seg.tur); mod = h < 0.35 ? 'tam' : h < 0.72 ? 'parca' : 'yok'; }
+      seg.korkuluk = mod;
+      if (mod === 'yok') return;
+      let yerel0 = -1;
+      for (let i = 0; i < cizgi.length - 1; i++) {
+        const p = cizgi[i], n = cizgi[i + 1];
+        if (p.si !== si) continue;
+        if (yerel0 < 0) yerel0 = i;
+        if (p.bosluk || p.rampa || n.bosluk) continue;
+        for (const yan of [-1, 1]) {
+          if (mod === 'parca' && karma(si + ':' + yan + ':' + Math.floor((i - yerel0) / 5)) > 0.4) continue;
+          const o = p.w / 2 + 0.18;
+          const x1 = p.x - Math.sin(p.a) * o * yan, z1 = p.z + Math.cos(p.a) * o * yan, x2 = n.x - Math.sin(n.a) * o * yan, z2 = n.z + Math.cos(n.a) * o * yan;
+          korkuluk.push({ x: (x1 + x2) / 2, z: (z1 + z2) / 2, y: (p.y + n.y) / 2, a: Math.atan2(z2 - z1, x2 - x1), L: Math.hypot(x2 - x1, z2 - z1), dy: n.y - p.y, yan });
+        }
+      }
+    });
+    return { yuzey, cizgi, segmentler, bitisI, korkuluk, son: { ...c } };
   }
 
   // İki döndürülmüş dikdörtgen (yükseklikleriyle) çakışıyor mu?
@@ -180,6 +203,7 @@ const Dunya = (() => {
   function kur(ortam, dizi, parcalar) {
     const yol = yolKur(dizi || []);
     const d = { ortam: ORTAMLAR[ortam] ? ortam : 'vadi', dizi: dizi || [], yol, cizgi: yol.cizgi, yuzey: yol.yuzey.slice(), engel: [], hareketli: [], alan: [], parcalar: parcalar || [], mayinKapali: new Map(), bitisI: yol.bitisI };
+    yol.korkuluk.forEach(k => d.engel.push({ cx: k.x, cz: k.z, r: k.a, hu: k.L / 2 + 0.06, hv: 0.15, ust: 0.95, y0: k.y, alcak: true, kenar: true }));
     d.parcalar.forEach(p => { const S = parcaSekli(p); for (const k in S) S[k].forEach(o => { o.pid = p.id; d[k].push(o); }); });
     return d;
   }
@@ -310,6 +334,7 @@ const Dunya = (() => {
 
     a.x += a.vx * dt; a.z += a.vz * dt;
     for (const e of d.engel) {
+      if (Math.abs(a.x - e.cx) > e.hu + e.hv + 1.2 || Math.abs(a.z - e.cz) > e.hu + e.hv + 1.2) continue;
       if (a.y > e.y0 + e.ust - 0.15 || a.y < e.y0 - 1.2) continue;
       const c = daireKutu(a.x, a.z, ARABA_R, e.cx, e.cz, e.r, e.hu, e.hv);
       if (!c) continue;
@@ -350,7 +375,7 @@ const Dunya = (() => {
     // dikey
     if (!a.havada) {
       const zm = zemin(d, a.x, a.z, a.y);
-      if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && a.vyT > 0.5; }
+      if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && (a.vx * Math.cos(zm.s.r) + a.vz * Math.sin(zm.s.r)) > 1.5; }
       else {
         a.havada = true; a.vy = Math.max(0, a.vyT) * 1.1;
         if (a.rampada) {
@@ -368,7 +393,7 @@ const Dunya = (() => {
         const sert = -a.vy;
         a.y = zm.h; a.havada = false; a.vy = 0; a.vyT = 0; a.spinV = 0; a.spin = 0; a.sonY = zm.h;
         ol.push({ tip: 'indi', guc: sert });
-      } else if (!zm && a.y < a.sonY - 1.5) { a.dus = 1; a.dusT = 0; ol.push({ tip: 'dustu' }); }
+      } else if (!zm && a.y < a.sonY - 4.5) { a.dus = 1; a.dusT = 0; ol.push({ tip: 'dustu' }); }
     }
     // ilerleme ve bitiş
     if (!a.havada) {
@@ -462,7 +487,7 @@ const Dunya = (() => {
       }
     };
     for (const al of d.alan) if (al.tip !== 'turbo') dusun(al.x, al.y, al.z, al.yr || 1.5);
-    for (const e of d.engel) if (!e.direk) dusun(e.cx, e.y0, e.cz, Math.max(e.hu, e.hv), e);
+    for (const e of d.engel) if (!e.direk && !e.kenar) dusun(e.cx, e.y0, e.cz, Math.max(e.hu, e.hv), e);
     for (const m of d.hareketli) if (m.tip === 'blok') dusun(m.cx, m.y0, m.cz, 2.2);
     if (atla) yanHedef = 0;
     bot.yan = (bot.yan || 0) + (yanHedef - (bot.yan || 0)) * Math.min(1, dt * 3);

@@ -22,7 +22,7 @@
   <section id="giris" class="ekran">
     <div class="kart">
       <div class="baslik">OYUNCAK<br><span>RALLİSİ</span></div>
-      <p class="alt"><b>🏎️ Pisti birlikte kur, sonra yarış!</b> Her turda herkes önce bir <b>yol</b> (viraj, yokuş, atlama rampası…), sonra bir <b>tuzak</b> seçer. Yollar pistin ucuna peş peşe eklenir, tuzaklar yolun istediğin yerine konur. Sonra arabanın arkasından bakarak o pistte yarışırsın!</p>
+      <p class="alt"><b>🏎️ Pisti birlikte kur, sonra yarış!</b> Her turda herkes önce bir <b>yol</b>, sonra bir <b>tuzak</b> kapar. Yolunu pistin ucuna kendin eklersin, tuzağı yolun istediğin yerine koyarsın. Sonra arabanın arkasından bakarak o pistte yarışırsın!</p>
       <label for="adim">Adın</label>
       <input id="adim" maxlength="14" placeholder="Adın" autocomplete="off">
       <button id="botlaBtn" class="ana">🤖 Botlarla oyna</button>
@@ -36,11 +36,12 @@
         <summary>📖 Nasıl oynanır?</summary>
         <ul>
           <li>2 ile 6 kişi. Tek başına botlarla ya da online odada (boş yerlere bot da eklenebilir).</li>
-          <li>🛣️ <b>Yol seçimi:</b> Ortaya oyuncu sayısından bir fazla yol kartı gelir: düz, uzun düzlük, sağ/sol viraj, hafif viraj, S viraj, yokuş yukarı/aşağı, yükselen spiral, atlama rampası, dar köprü. Puanı en düşük olan ilk seçer.</li>
-          <li>🪤 <b>Tuzak seçimi:</b> Sonra aynı şekilde bir tuzak ya da fayda kartı seçilir.</li>
-          <li>🏗️ <b>İnşa:</b> Seçilen yollar seçim sırasıyla pistin ucuna eklenir; bitiş her turda yeni uca taşınır. Bir yol eskisinin üstüne denk gelirse kendiliğinden yukarı kaldırılır, üstünden köprüyle geçer.</li>
-          <li>🧩 <b>Tuzak koyma:</b> Herkes aynı anda tuzağını yolun istediği yerine koyar. Bilgisayar: fareyle gez, <b>tıkla</b> koy, sürükle kaydır, tekerlek yakınlaş, <b>R</b> / sağ tık döndür. Telefon: parmakla kaydır, dokunup yer seç, ✔ koy.</li>
-          <li>🏁 <b>Yarış:</b> Kamera arabanın arkasında. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> nitro, <b>R</b> takılınca kurtar. Yoldan düşersen az geriden devam edersin.</li>
+          <li>🛣️ <b>Yol kapma:</b> Ortaya oyuncu sayısından bir fazla yol kartı gelir (resimlerinde yolun şekli var). Sıra yok: herkes aynı anda kapar, kim önce tıklarsa kart onundur. Herkesin faresi ekranda görünür.</li>
+          <li>🪤 <b>Tuzak kapma:</b> Sonra aynı şekilde bir tuzak ya da fayda kartı kapılır.</li>
+          <li>🏗️ <b>Yol ekleme:</b> Herkes kendi yolunu pistin ucuna kendisi ekler: istersen ↔ ile ters çevir, sonra ✔ Yola ekle. Kim önce eklerse pist onun yoluyla devam eder. Bitiş her turda yeni uca taşınır. Bir yol eskisinin üstüne denk gelirse kendiliğinden yukarı kaldırılır. Bazı yollarda yanlarda korkuluk vardır, bazılarında yer yer, bazılarında hiç yok.</li>
+          <li>🧩 <b>Tuzak koyma:</b> Herkes aynı anda tuzağını yolun istediği yerine koyar. Bilgisayar: fareyle gez, <b>tıkla</b> koy, <b>R</b> tuzağı çevir. Telefon: dokunup yer seç, ✔ koy.</li>
+          <li>🎥 <b>Kamera:</b> Yarış dışında haritayı her yönden görebilirsin: sol tuşla sürükle döndür (360°), sağ tuşla sürükle kaydır, tekerlek yakınlaş. Telefonda tek parmak döndürür, iki parmak kaydırır ve yakınlaştırır.</li>
+          <li>🏁 <b>Yarış:</b> Kamera arabanın arkasında. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> nitro (her yarışta 1 tane, Nitro kartıyla +3), <b>R</b> takılınca kurtar. Yoldan düşersen az geriden devam edersin.</li>
           <li>🏆 Puan: 1. olan +3, 2. +2, bitiren herkes +1. Kimse bitiremezse sonraki tuzak seçiminde mutlaka Söküm ya da Bomba çıkar.</li>
           <li>🪤 <b>Tuzaklar:</b> 🧱 beton bariyer, 🌀 dönen kol, 🔨 yıkım güllesi, 🟧 kayan blok, 🛢️ yağ, 🟫 çamur, 💥 mayın, 🦘 zıplatıcı.</li>
           <li>🛟 <b>Fayda:</b> ⏩ hız şeridi, 🚧 çelik korkuluk (düşmeni önler), 🔧 söküm (bir tuzağı söker), 💣 bomba (çevresini temizler), 🛡️ kalkan ve 🔥 nitro (sonraki yarış için sana güç).</li>
@@ -98,6 +99,12 @@
     <div id="ipucu"></div>
     <!-- Kart seçme -->
     <div id="kartPanel" class="gizli"><div id="kartBaslik"></div><div id="kartlar"></div></div>
+    <!-- Yol koyma -->
+    <div id="yolPanel" class="gizli">
+      <img id="yolResim" alt="">
+      <div id="yolDurum"></div>
+      <div class="satir"><button id="yolCevirBtn">↔ Ters çevir</button><button id="yolEkleBtn" class="ana">✔ Yola ekle</button></div>
+    </div>
     <!-- Yerleştirme -->
     <div id="yerlestirPanel" class="gizli">
       <div id="elimde"></div>
