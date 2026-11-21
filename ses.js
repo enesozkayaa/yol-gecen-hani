@@ -31,15 +31,8 @@ const Ses = (() => {
   // ---------- Motor sesi (sadece kendi araban) ----------
   // Gerçek motor gibi: silindir patlamaları (darbeli dalga), egzoz hırıltısı (patlamalarla titreyen gürültü),
   // hafif bozulma (homurtu), devir + vites. Birkaç motor tipi var; oyuncu bekleme odasında seçer.
-  const MOTORLAR = {
-    sedan: { ad: 'Aile arabası (4 silindir)', sil: 4, rolanti: 850, kirmizi: 6000, filtre: [600, 2200], gurultu: 0.18, sert: 1.6, alt: 0.08, turbo: 0, ses: 1 },
-    v8:    { ad: 'Kas araba (V8 homurtusu)',   sil: 8, rolanti: 650, kirmizi: 6200, filtre: [380, 1500], gurultu: 0.32, sert: 3.2, alt: 0.55, turbo: 0, ses: 1.15 },
-    ralli: { ad: 'Ralli (turbolu 4 silindir)', sil: 4, rolanti: 1000, kirmizi: 7600, filtre: [750, 2900], gurultu: 0.28, sert: 2.4, alt: 0.12, turbo: 0.035, ses: 1 },
-    spor:  { ad: 'Spor araba (6 silindir)',    sil: 6, rolanti: 900, kirmizi: 7400, filtre: [650, 2600], gurultu: 0.22, sert: 2, alt: 0.22, turbo: 0, ses: 1 },
-    dizel: { ad: 'Kamyonet (dizel)',           sil: 4, rolanti: 700, kirmizi: 4200, filtre: [300, 1000], gurultu: 0.5, sert: 2.8, alt: 0.35, turbo: 0.02, ses: 1.2 },
-  };
-  let motorTipi = 'sedan';
-  try { if (MOTORLAR[localStorage.getItem('ygh.motor')]) motorTipi = localStorage.getItem('ygh.motor'); } catch (e) { }
+  // Tek motor sesi: aile arabası (4 silindir) — kullanıcı bunu seçti
+  const MOTOR = { sil: 4, rolanti: 850, kirmizi: 6000, filtre: [600, 2200], gurultu: 0.18, sert: 1.6, alt: 0.08, turbo: 0, ses: 1 };
   let motor = null;
   const darbeDalgasi = {};
   function dalgaAl(sert) {
@@ -54,9 +47,9 @@ const Ses = (() => {
     for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; e[i] = Math.tanh(x * miktar) / Math.tanh(miktar); }
     return e;
   }
-  function motorBaslat(tip) {
+  function motorBaslat() {
     if (!ctx || motor) return;
-    const P = MOTORLAR[tip || motorTipi] || MOTORLAR.sedan;
+    const P = MOTOR;
     const ana2 = ctx.createGain(); ana2.gain.value = 0;
     const karisim = ctx.createGain();
     // ana patlama sesi
@@ -117,10 +110,9 @@ const Ses = (() => {
     const m = motor; motor = null;
     try { m.ana2.gain.setTargetAtTime(0, ctx.currentTime, 0.1); setTimeout(() => { try { [m.o, m.alt, m.ritim, m.tu, m.n].forEach(x => x.stop()); } catch (e) { } }, 500); } catch (e) { }
   }
-  function motorTipiSec(tip) { if (!MOTORLAR[tip]) return; motorTipi = tip; try { localStorage.setItem('ygh.motor', tip); } catch (e) { } }
 
   return {
-    baslat, degistir, get acik() { return acik; }, motorBaslat, motorAyarla, motorDurdur, motorTipiSec, MOTORLAR, get motorTipi() { return motorTipi; },
+    baslat, degistir, get acik() { return acik; }, motorBaslat, motorAyarla, motorDurdur,
     tik() { ton(1200, 0.04, 'square', 0.06); },
     kartAl() { ton(520, 0.08, 'triangle', 0.2, 900); ton(900, 0.1, 'sine', 0.15, null, 0.06); gurultu(0.08, 0.15, 3000, 'highpass'); },
     sendeSira() { [660, 880, 1100].forEach((f, i) => ton(f, 0.15, 'triangle', 0.18, null, i * 0.09)); },

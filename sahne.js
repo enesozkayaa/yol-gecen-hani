@@ -290,10 +290,10 @@ const Sahne = (() => {
       const k = new THREE.Group(); k.position.set(p.x, p.y, p.z); k.rotation.y = -p.a;
       const dm = mat(0x2a2a30, { m: 0.6, p: 0.4 });
       [-1, 1].forEach(s => { const d = silindir(0.25, 0.3, 6, dm, 10); d.position.set(0, 3, s * (p.w / 2 + 0.5)); k.add(d); });
-      const pano = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, p.w + 1.6), [dm, dm, dm, dm,
-        new THREE.MeshStandardMaterial({ map: tuval(512, 96, (g, w, h) => { g.fillStyle = renk; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.fillText(yazi, w / 2, 72); }), emissive: 0x222222 }),
-        new THREE.MeshStandardMaterial({ map: tuval(512, 96, (g, w, h) => { g.fillStyle = renk; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.fillText(yazi, w / 2, 72); }), emissive: 0x222222 })]);
-      pano.position.y = 6; pano.rotation.y = Math.PI / 2; pano.castShadow = true; k.add(pano);
+      // pano yolun karşısına uzanır; yazı arabaların gördüğü geniş yüzlerde (önde ve arkada)
+      const yaziM = () => new THREE.MeshStandardMaterial({ map: tuval(512, 96, (g, w, h) => { g.fillStyle = renk; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = 'bold 64px sans-serif'; g.textAlign = 'center'; g.fillText(yazi, w / 2, 72); }), emissive: 0x222222 });
+      const pano = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.4, p.w + 1.6), [yaziM(), yaziM(), dm, dm, dm, dm]);
+      pano.position.y = 6; pano.castShadow = true; k.add(pano);
       const cizgi = new THREE.Mesh(new THREE.PlaneGeometry(1.2, p.w), new THREE.MeshStandardMaterial({ map: DOKU.dama }));
       cizgi.rotation.x = -Math.PI / 2; cizgi.position.y = 0.03; k.add(cizgi);
       yolG.add(k); return k;

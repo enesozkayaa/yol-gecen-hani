@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 12;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 13;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -131,24 +131,6 @@ const Oyun = (() => {
   $('kodKopyalaBtn').onclick = () => { navigator.clipboard?.writeText(Ag.kod).then(() => { $('lobiDurum').textContent = 'Kod kopyalandı.'; }).catch(() => {}); };
   $('lobiCikBtn').onclick = () => menuyeDon('');
   $('lobiMikBtn').onclick = mikDegistir;
-  // Motor sesi: herkes kendi seçer (sadece kendi bilgisayarında)
-  $('motorSec').innerHTML = Object.entries(Ses.MOTORLAR).map(([k, P]) => `<option value="${k}">${P.ad}</option>`).join('');
-  $('motorSec').value = Ses.motorTipi;
-  $('motorSec').onchange = () => { Ses.motorTipiSec($('motorSec').value); motorDinle(); };
-  let motorDeneme = null;
-  function motorDinle() {
-    Ses.baslat(); clearInterval(motorDeneme); Ses.motorDurdur();
-    if (!Ses.acik) { Ses.degistir(); $('sesBtn').textContent = '🔊'; }   // dinlemek isteyen sesi duysun
-    setTimeout(() => {
-      Ses.motorBaslat(); const bas = performance.now();
-      motorDeneme = setInterval(() => {
-        const t = (performance.now() - bas) / 1000;
-        if (t > 4.5 || O?.faz === 'yaris') { clearInterval(motorDeneme); if (O?.faz !== 'yaris') Ses.motorDurdur(); return; }
-        Ses.motorAyarla(t < 0.8 ? 0 : Math.min(16, (t - 0.8) * 5), t < 3.6 ? 1 : 0, false);
-      }, 50);
-    }, 120);
-  }
-  $('motorDinleBtn').onclick = motorDinle;
   $('baslaBtn').onclick = baslat;
   function baslat() {
     if (!yonetici()) return;

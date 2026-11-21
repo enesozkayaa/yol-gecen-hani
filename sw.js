@@ -3,10 +3,10 @@
 // Oyunu güncelleyip yüklerken ONBELLEK numarasını 1 artır (oyun.js SURUM ile aynı).
 // =============================================================
 
-const ONBELLEK = 'yol-gecen-hani-v12';
+const ONBELLEK = 'yol-gecen-hani-v13';
 const DOSYALAR = [
   './', 'index.html', 'style.css', 'dunya.js', 'motor.js', 'sahne.js', 'ag.js', 'ses.js', 'oyun.js',
-  'ses-ornekleri.html', 'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',
+  'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',
 ];
 
 self.addEventListener('install', olay => {
