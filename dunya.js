@@ -34,6 +34,9 @@ const Dunya = (() => {
     sagSpiral:{ ad: 'Yükselen Sağ',     emoji: '🌀', agirlik: 4, acik: 'Tırmanarak sağa döner.', seg: [{ don: 90, R: 12, dh: 4 }], ayna: 'solSpiral' },
     solSpiral:{ ad: 'Yükselen Sol',     emoji: '🌀', agirlik: 4, acik: 'Tırmanarak sola döner.', seg: [{ don: -90, R: 12, dh: 4 }], ayna: 'sagSpiral' },
     atlama:   { ad: 'Atlama Rampası',   emoji: '🛫', agirlik: 5, acik: 'Rampadan uç, boşluğun karşısına kon!', seg: [{ L: 6, dh: 1.6, rampa: true }, { L: 7, dh: -1.6, bosluk: true }, { L: 9 }] },
+    tumsek:   { ad: 'Tümsekli Yol',     emoji: '〽️', agirlik: 6, acik: 'Küçük tümsekler: hızlıysan hoplarsın.', seg: [{ L: 16, dalga: { n: 4, A: 0.55 } }] },
+    dalga:    { ad: 'Dalgalı Yol',      emoji: '🌊', agirlik: 5, acik: 'Büyük dalgalar: tepede havalanırsın!', seg: [{ L: 24, dalga: { n: 2, A: 1.7 } }] },
+    kasis:    { ad: 'Kasis',            emoji: '🔺', agirlik: 5, acik: 'Ortada sert bir tümsek. Hızla geçersen zıplarsın.', seg: [{ L: 10, kasis: { A: 0.8, gen: 2.6 } }] },
     dar:      { ad: 'Dar Köprü',        emoji: '🌉', agirlik: 4, acik: 'Sadece 3.6 metre genişlik. Dikkat!', seg: [{ L: 14, w: 3.6 }] },
   };
   const YOL_KARTLARI = Object.keys(YOLLAR).filter(k => k !== 'sVirajTers');
@@ -80,7 +83,20 @@ const Dunya = (() => {
         let dh = s.dh || 0;
         if (c.y + dh < 0) dh = -c.y;
         if (c.y + dh > 36) dh = 36 - c.y;
-        if (!s.don) {
+        if (!s.don && (s.dalga || s.kasis)) {
+          // tümsekli düz yol: 0.5 m'lik küçük eğimli parçalardan oluşur
+          const L = s.L, ux = Math.cos(c.a), uz = Math.sin(c.a), y0 = c.y;
+          const prof = t => s.dalga ? s.dalga.A * (1 - Math.cos(2 * PI * s.dalga.n * t / L)) / 2
+            : (Math.abs(t - L / 2) < s.kasis.gen / 2 ? s.kasis.A * Math.sin(PI * (t - (L / 2 - s.kasis.gen / 2)) / s.kasis.gen) : 0);
+          const yy = t => y0 + dh * t / L + prof(t);
+          const ad = 0.5;
+          for (let t = 0; t < L - 1e-6; t += ad) {
+            const r = { cx: c.x + ux * (t + ad / 2), cz: c.z + uz * (t + ad / 2), r: c.a, hu: ad / 2 + 0.06, hv: w / 2, h0: yy(t), h1: yy(t + ad), si, tumsek: true };
+            yuzey.push(r); rects.push(r);
+            cizgi.push({ x: c.x + ux * t, y: yy(t), z: c.z + uz * t, a: c.a, w, si, tumsek: true });
+          }
+          c.x += ux * L; c.z += uz * L; c.y += dh;
+        } else if (!s.don) {
           const L = s.L, ux = Math.cos(c.a), uz = Math.sin(c.a);
           if (!s.bosluk) { const r = { cx: c.x + ux * L / 2, cz: c.z + uz * L / 2, r: c.a, hu: L / 2 + 0.2, hv: w / 2, h0: c.y, h1: c.y + dh, rampa: !!s.rampa, si }; yuzey.push(r); rects.push(r); }
           for (let t = 0; t < L; t += 1) cizgi.push({ x: c.x + ux * t, y: c.y + dh * t / L, z: c.z + uz * t, a: c.a, w, si, bosluk: !!s.bosluk, rampa: !!s.rampa });
@@ -377,7 +393,10 @@ const Dunya = (() => {
     // dikey
     if (!a.havada) {
       const zm = zemin(d, a.x, a.z, a.y);
-      if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && (a.vx * Math.cos(zm.s.r) + a.vz * Math.sin(zm.s.r)) > 1.5; }
+      const yatay = Math.max(1, Math.hypot(a.vx, a.vz));
+      if (zm && zm.h >= a.y - 0.45 && zm.s.tumsek && a.vyT > 0.8 && (zm.h - a.y) / dt < a.vyT - G * (0.5 / yatay) * 1.2) {
+        a.havada = true; a.vy = Math.min(a.vyT, 4.2); a.rampada = false; ol.push({ tip: 'havalandi', yuk: a.vy });   // tümsekten uçtu
+      } else if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && (a.vx * Math.cos(zm.s.r) + a.vz * Math.sin(zm.s.r)) > 1.5; }
       else {
         a.havada = true; a.vy = Math.max(0, a.vyT) * 1.1;
         if (a.rampada) {
