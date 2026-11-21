@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!--
+  Oyuncak Rallisi - uygulama simgesi. Adres sonuna ?boyut=512 yazılır.
+  PNG için: msedge --headless=new --user-data-dir=<geçici klasör> --hide-scrollbars --window-size=512,512 --screenshot=ikonlar/ikon-512.png "file:///.../araclar/ikon-ciz.html?boyut=512"
+-->
+<html>
+<head>
+<meta charset="UTF-8">
+<style>html, body { margin: 0; background: #1a3a6a; overflow: hidden; } canvas { display: block; }</style>
+</head>
+<body>
+<script>
+  const boyut = +(new URLSearchParams(location.search).get('boyut') || 512);
+  const c = document.createElement('canvas'); c.width = c.height = boyut; document.body.appendChild(c);
+  const g = c.getContext('2d'); g.scale(boyut / 512, boyut / 512);
+  // arka plan: halı halkaları
+  g.fillStyle = '#8a3a4a'; g.fillRect(0, 0, 512, 512);
+  for (let r = 380; r > 20; r -= 44) { g.strokeStyle = (r / 44) % 2 < 1 ? '#e8b86a' : '#3a5a8a'; g.lineWidth = 16; g.beginPath(); g.arc(256, 300, r, 0, 7); g.stroke(); }
+  // cetvel köprü
+  g.save(); g.translate(256, 330); g.rotate(-0.38);
+  g.fillStyle = '#7a5a10'; g.fillRect(-330, -48 + 12, 660, 110);
+  g.fillStyle = '#f7cf3a'; g.fillRect(-330, -48, 660, 110);
+  g.fillStyle = '#3a2a10'; for (let i = -320; i < 330; i += 22) { const u = (i / 22) % 5 === 0 ? 30 : 16; g.fillRect(i, -48, 4, u); g.fillRect(i, 62 - u, 4, u); }
+  g.restore();
+  // oyuncak araba
+  g.save(); g.translate(250, 262); g.rotate(-0.38);
+  g.fillStyle = '#0005'; g.beginPath(); g.ellipse(10, 70, 170, 30, 0, 0, 7); g.fill();
+  g.fillStyle = '#1a1a1a'; [[-95, 48], [95, 48]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 44, 0, 7); g.fill(); });
+  g.fillStyle = '#e8413a'; g.beginPath(); g.roundRect(-170, -30, 340, 90, 30); g.fill();
+  g.fillStyle = '#c82a22'; g.fillRect(-170, 30, 340, 30);
+  g.fillStyle = '#e8413a'; g.beginPath(); g.moveTo(-90, -30); g.lineTo(-55, -100); g.lineTo(60, -100); g.lineTo(100, -30); g.fill();
+  g.fillStyle = '#9ad8ff'; g.beginPath(); g.moveTo(-70, -36); g.lineTo(-46, -86); g.lineTo(-2, -86); g.lineTo(-2, -36); g.fill();
+  g.beginPath(); g.moveTo(10, -36); g.lineTo(10, -86); g.lineTo(52, -86); g.lineTo(82, -36); g.fill();
+  g.fillStyle = '#fff'; g.beginPath(); g.arc(-8, 14, 26, 0, 7); g.fill();
+  g.fillStyle = '#1a2a5a'; g.font = 'bold 36px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1', -8, 16);
+  g.fillStyle = '#fff6a0'; g.fillRect(156, -10, 16, 22);
+  g.fillStyle = '#e0e0e8'; [[-95, 48], [95, 48]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 20, 0, 7); g.fill(); });
+  // hız çizgileri
+  g.strokeStyle = '#ffffffcc'; g.lineWidth = 10; g.lineCap = 'round'; [[-230, -40, -195], [-250, 0, -200], [-225, 40, -195]].forEach(([x1, y, x2]) => { g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); });
+  g.restore();
+  // dama bayrak
+  g.save(); g.translate(400, 70); g.rotate(0.15);
+  g.fillStyle = '#ddd'; g.fillRect(-6, 0, 10, 170);
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) { g.fillStyle = (i + j) % 2 ? '#111' : '#fff'; g.fillRect(4 + i * 16, j * 16, 16, 16); }
+  g.restore();
+</script>
+</body>
+</html>
