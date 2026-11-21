@@ -22,7 +22,7 @@
   <section id="giris" class="ekran">
     <div class="kart">
       <div class="baslik">OYUNCAK<br><span>RALLİSİ</span></div>
-      <p class="alt"><b>🏎️ Pisti birlikte kur, sonra yarış!</b> Her turda herkes bir parça seçer: köprü, rampa, tuzak, mayın… Sonra hepsi aynı anda pistin istediği yerine koyar ve o pistte yarışılır. Rakiplerine tuzak kur, kendine kısa yol aç!</p>
+      <p class="alt"><b>🏎️ Pisti birlikte kur, sonra yarış!</b> Her turda herkes önce bir <b>yol</b> (viraj, yokuş, atlama rampası…), sonra bir <b>tuzak</b> seçer. Yollar pistin ucuna peş peşe eklenir, tuzaklar yolun istediğin yerine konur. Sonra arabanın arkasından bakarak o pistte yarışırsın!</p>
       <label for="adim">Adın</label>
       <input id="adim" maxlength="14" placeholder="Adın" autocomplete="off">
       <button id="botlaBtn" class="ana">🤖 Botlarla oyna</button>
@@ -36,13 +36,14 @@
         <summary>📖 Nasıl oynanır?</summary>
         <ul>
           <li>2 ile 6 kişi. Tek başına botlarla ya da online odada (boş yerlere bot da eklenebilir).</li>
-          <li>🃏 <b>Seçim:</b> Ortaya oyuncu sayısından bir fazla parça gelir. Puanı en düşük olan ilk seçer, sonra sırayla.</li>
-          <li>🧩 <b>Yerleştirme:</b> Herkes aynı anda, süre bitmeden parçasını pistin istediği yerine koyar. Bilgisayar: fareyle gez, <b>tıkla</b> koy, <b>R</b> / sağ tık / tekerlek döndür. Telefon: dokunup yerini seç, ↻ döndür, ✔ koy. Yeşil = konabilir, kırmızı = konamaz.</li>
-          <li>🏁 <b>Yarış:</b> Başlangıçtan bitiş dairesine ilk varan kazanır. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> nitro, <b>R</b> takılınca kurtar. Masadan düşersen az geriden devam edersin.</li>
-          <li>🏆 Puan: 1. olan +3, 2. +2, bitiren herkes +1. Kimse bitiremezse sonraki seçimde mutlaka Silgi ya da Bomba çıkar.</li>
-          <li>🧱 <b>Parçalar:</b> 📏 cetvel köprü, 📘 kitap platform, 🛹 rampa, ⏩ hız şeridi, 🧱 kitap duvarı, 🌀 dönen cetvel, 🔨 tokmak, 🧽 kayan silgi, 🛢️ yağ, 🍯 bal, 🧨 kestane fişeği, 🌀 zıplama yayı, 🌌 ışınlayıcı.</li>
-          <li>🛟 <b>Fayda:</b> 🩹 Silgi (bir parçayı siler), 💣 Bomba (çevresini temizler), 🚧 Korkuluk (düşmeyi önler), 🛡️ Kalkan ve 🔥 Nitro (sonraki yarış için sana güç).</li>
-          <li>Yolu tamamen kapatan parça konamaz; bitişe giden bir yol hep kalır.</li>
+          <li>🛣️ <b>Yol seçimi:</b> Ortaya oyuncu sayısından bir fazla yol kartı gelir: düz, uzun düzlük, sağ/sol viraj, hafif viraj, S viraj, yokuş yukarı/aşağı, yükselen spiral, atlama rampası, dar köprü. Puanı en düşük olan ilk seçer.</li>
+          <li>🪤 <b>Tuzak seçimi:</b> Sonra aynı şekilde bir tuzak ya da fayda kartı seçilir.</li>
+          <li>🏗️ <b>İnşa:</b> Seçilen yollar seçim sırasıyla pistin ucuna eklenir; bitiş her turda yeni uca taşınır. Bir yol eskisinin üstüne denk gelirse kendiliğinden yukarı kaldırılır, üstünden köprüyle geçer.</li>
+          <li>🧩 <b>Tuzak koyma:</b> Herkes aynı anda tuzağını yolun istediği yerine koyar. Bilgisayar: fareyle gez, <b>tıkla</b> koy, sürükle kaydır, tekerlek yakınlaş, <b>R</b> / sağ tık döndür. Telefon: parmakla kaydır, dokunup yer seç, ✔ koy.</li>
+          <li>🏁 <b>Yarış:</b> Kamera arabanın arkasında. <b>W/↑</b> gaz, <b>S/↓</b> fren/geri, <b>A D / ← →</b> direksiyon, <b>Boşluk</b> nitro, <b>R</b> takılınca kurtar. Yoldan düşersen az geriden devam edersin.</li>
+          <li>🏆 Puan: 1. olan +3, 2. +2, bitiren herkes +1. Kimse bitiremezse sonraki tuzak seçiminde mutlaka Söküm ya da Bomba çıkar.</li>
+          <li>🪤 <b>Tuzaklar:</b> 🧱 beton bariyer, 🌀 dönen kol, 🔨 yıkım güllesi, 🟧 kayan blok, 🛢️ yağ, 🟫 çamur, 💥 mayın, 🦘 zıplatıcı.</li>
+          <li>🛟 <b>Fayda:</b> ⏩ hız şeridi, 🚧 çelik korkuluk (düşmeni önler), 🔧 söküm (bir tuzağı söker), 💣 bomba (çevresini temizler), 🛡️ kalkan ve 🔥 nitro (sonraki yarış için sana güç).</li>
         </ul>
       </details>
     </div>
@@ -56,21 +57,20 @@
       <ul id="lobiListe"></ul>
       <button id="botEkleBtn" class="kucuk">➕ Bot ekle</button>
       <div id="ayarlar">
-        <label>🗺️ Harita <select id="ayHarita"><option value="masa">📚 Çalışma Masası</option><option value="mutfak">🍳 Mutfak Tezgâhı</option></select></label>
+        <label>🗺️ Ortam <select id="ayHarita"><option value="vadi">🌲 Yeşil Vadi</option><option value="kanyon">🏜️ Çöl Kanyonu</option></select></label>
         <label>🏆 Oyun nasıl bitsin? <select id="ayBitis"><option value="puan">Puana ilk ulaşan kazanır</option><option value="tur">Belli sayıda tur oynanır</option></select></label>
         <label id="satirHedef">🎯 Hedef puan <select id="ayHedef"><option value="5">5</option><option value="8">8</option><option value="10">10</option><option value="15">15</option><option value="20">20</option></select></label>
         <label id="satirTur">🔁 Tur sayısı <select id="ayTur"><option value="3">3</option><option value="5">5</option><option value="7">7</option><option value="10">10</option><option value="15">15</option></select></label>
         <label>🧩 Yerleştirme süresi <select id="ayYerlestir"><option value="20">20 sn</option><option value="30">30 sn</option><option value="45">45 sn</option></select></label>
-        <label>⏱️ Yarış süresi <select id="aySure"><option value="60">1 dk</option><option value="90">1.5 dk</option><option value="120">2 dk</option></select></label>
+        <label>⏱️ Yarış süresi <select id="aySure"><option value="45">En az 45 sn</option><option value="60">En az 1 dk</option><option value="90">En az 1.5 dk</option></select></label>
         <label id="satirZorluk">🤖 Bot zorluğu <select id="ayZorluk"><option value="kolay">Kolay</option><option value="orta">Orta</option><option value="zor">Zor</option></select></label>
       </div>
       <fieldset id="kurallar">
-        <legend>🧱 Hangi parçalar çıksın?</legend>
-        <label><input type="checkbox" data-kat="yol"> 📏 Yol ve rampa</label>
+        <legend>🪤 Hangi tuzaklar çıksın?</legend>
         <label><input type="checkbox" data-kat="engel"> 🧱 Engeller</label>
         <label><input type="checkbox" data-kat="kaygan"> 🛢️ Kaygan ve yapışkan</label>
         <label><input type="checkbox" data-kat="patlar"> 🧨 Patlayan ve fırlatan</label>
-        <label><input type="checkbox" data-kat="fayda"> 🛟 Fayda (silgi, bomba, korkuluk, kalkan, nitro)</label>
+        <label><input type="checkbox" data-kat="fayda"> 🛟 Fayda (hız şeridi, korkuluk, söküm, bomba, kalkan, nitro)</label>
       </fieldset>
       <p id="ayarOzet" class="durum"></p>
       <div class="satir" id="lobiSatir">
@@ -101,7 +101,7 @@
     <!-- Yerleştirme -->
     <div id="yerlestirPanel" class="gizli">
       <div id="elimde"></div>
-      <div class="satir dokunmatik"><button id="donBtn">↻ Döndür</button><button id="koyBtn" class="ana">✔ Koy</button></div>
+      <div class="satir"><button id="uzakBtn" class="kucuk">➖</button><button id="yakinBtn" class="kucuk">➕</button><button id="donBtn" class="dokunmatik">↻ Döndür</button><button id="koyBtn" class="ana dokunmatik">✔ Koy</button></div>
     </div>
     <!-- Telefonda sürüş -->
     <div id="suruSol" class="dokunmatik surus"><button data-t="sol">◀</button><button data-t="sag">▶</button></div>
