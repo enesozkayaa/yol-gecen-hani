@@ -1,7 +1,7 @@
 {
-  "name": "Oyuncak Rallisi",
-  "short_name": "Oyuncak Rallisi",
-  "description": "Pisti birlikte kur, tuzak koy, oyuncak arabalarla yarış!",
+  "name": "Yol Geçen Hanı",
+  "short_name": "Yol Geçen Hanı",
+  "description": "Pisti birlikte kur, tuzak koy, arabalarla yarış!",
   "lang": "tr",
   "id": "./",
   "start_url": "./",
@@ -10,9 +10,21 @@
   "orientation": "landscape",
   "background_color": "#1a3a6a",
   "theme_color": "#1a3a6a",
-  "categories": ["games"],
+  "categories": [
+    "games"
+  ],
   "icons": [
-    { "src": "ikonlar/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "ikonlar/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "ikonlar/ikon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "ikonlar/ikon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }

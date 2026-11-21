@@ -1,5 +1,5 @@
 // =============================================================
-// Oyuncak Rallisi - dünya: pist zinciri (yol parçaları peş peşe), tuzaklar, araba fiziği, botların sürüşü.
+// Yol Geçen Hanı - dünya: pist zinciri (yol parçaları peş peşe), tuzaklar, araba fiziği, botların sürüşü.
 // Bu dosya hem tarayıcıda hem Node'da (test) çalışır. Three.js kullanmaz.
 // Yön kuralı: açı a için ileri yön (cos a, sin a) [x, z]; sağ taraf (-sin a, cos a). a artınca araba sağa döner.
 // =============================================================

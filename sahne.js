@@ -1,5 +1,5 @@
 // =============================================================
-// Oyuncak Rallisi - 3D görüntü (Three.js). Gökyüzü, vadi/kanyon, asfalt pist ve direkleri,
+// Yol Geçen Hanı - 3D görüntü (Three.js). Gökyüzü, vadi/kanyon, asfalt pist ve direkleri,
 // tuzaklar, arabalar, efektler, takip kamerası. Kurallar ve fizik burada değil (dunya.js).
 // Yön: dünya açısı a için mesh.rotation.y = -a (model +x'e bakar).
 // =============================================================

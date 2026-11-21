@@ -1,5 +1,5 @@
 // =============================================================
-// Oyuncak Rallisi - oyun motoru. Sadece oda sahibinde (ya da tek kişilik oyunda) çalışır.
+// Yol Geçen Hanı - oyun motoru. Sadece oda sahibinde (ya da tek kişilik oyunda) çalışır.
 // Tur sırası: yol kartı kapma → tuzak kartı kapma → herkes yolunu pistin ucuna kendisi ekler (kim önce basarsa)
 //             → tuzaklar herkesçe aynı anda konur → yarış → puan → (yeni tur ya da oyun sonu).
 // Botları da burası sürer. Node'da araclar/test-motor.js ile denenir.

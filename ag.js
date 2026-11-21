@@ -1,11 +1,11 @@
 // =============================================================
-// Oyuncak Rallisi - online oda (PeerJS) ve sesli sohbet
+// Yol Geçen Hanı - online oda (PeerJS) ve sesli sohbet
 // Odayı açan "ev"dir: oyun motorunu o çalıştırır. Diğerleri evle konuşur.
 // Ses: mikrofonu açık oyuncular birbirine bağlanır. Herkes herkesi duyar.
 // =============================================================
 
 const Ag = (() => {
-  const ODA_ONEKI = 'oyuncak-rallisi-oda-';
+  const ODA_ONEKI = 'yol-gecen-hani-oda-';
   const KOD_HARF = 'ABCDEFGHJKLMNPRSTUVYZ23456789';
   const NABIZ = 2000, ZAMAN_ASIMI = 15000;
   const ag = { peer: null, mod: null, kod: null, benimId: null, oyuncular: [], baglantilar: new Map(), ev: null, sonEv: 0 };

@@ -1,9 +1,9 @@
 // =============================================================
-// Oyuncak Rallisi - servis çalışanı (ana ekrana ekleme + çevrimdışı kopya)
+// Yol Geçen Hanı - servis çalışanı (ana ekrana ekleme + çevrimdışı kopya)
 // Oyunu güncelleyip yüklerken ONBELLEK numarasını 1 artır (oyun.js SURUM ile aynı).
 // =============================================================
 
-const ONBELLEK = 'oyuncak-rallisi-v6';
+const ONBELLEK = 'yol-gecen-hani-v7';
 const DOSYALAR = [
   './', 'index.html', 'style.css', 'dunya.js', 'motor.js', 'sahne.js', 'ag.js', 'ses.js', 'oyun.js',
   'manifest.webmanifest', 'ikonlar/ikon-192.png', 'ikonlar/ikon-512.png',
@@ -14,7 +14,7 @@ self.addEventListener('install', olay => {
   self.skipWaiting();
 });
 self.addEventListener('activate', olay => {
-  olay.waitUntil(caches.keys().then(adlar => Promise.all(adlar.filter(a => a.startsWith('oyuncak-rallisi-') && a !== ONBELLEK).map(a => caches.delete(a)))));
+  olay.waitUntil(caches.keys().then(adlar => Promise.all(adlar.filter(a => (a.startsWith('yol-gecen-hani-') || a.startsWith('oyuncak-rallisi-')) && a !== ONBELLEK).map(a => caches.delete(a)))));
   self.clients.claim();
 });
 // Önce internet (en yeni sürüm), olmazsa kayıtlı kopya

@@ -1,11 +1,11 @@
 // =============================================================
-// Oyuncak Rallisi - oyuncunun tarafı: ekranlar, bekleme odası, kart seçme, parça yerleştirme,
+// Yol Geçen Hanı - oyuncunun tarafı: ekranlar, bekleme odası, kart seçme, parça yerleştirme,
 // kendi arabanı sürme (fizik burada çalışır, yer eve gönderilir), diğerlerini gösterme, HUD, telefon tuşları.
 // Kurallar evde (motor.js). Tek kişilik oyunda motor aynı sayfada çalışır.
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 6;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 7;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));

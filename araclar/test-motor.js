@@ -1,4 +1,4 @@
-// Oyuncak Rallisi - motor testi: sadece botlarla bütün bir oyun oynatır.
+// Yol Geçen Hanı - motor testi: sadece botlarla bütün bir oyun oynatır.
 // Çalıştır: node araclar/test-motor.js [ortam] [botSayisi]
 const Motor = require('../motor.js');
 const ayar = { ortam: process.argv[2] || 'vadi', bitis: 'tur', turSayisi: 6, hedefPuan: 10, yerlestir: 20, yarisSure: 90, botZorluk: 'orta', katlar: {} };

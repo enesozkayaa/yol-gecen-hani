@@ -1,5 +1,5 @@
 // =============================================================
-// Oyuncak Rallisi - oyun sesleri (hepsi kodla üretilir, dosya yok)
+// Yol Geçen Hanı - oyun sesleri (hepsi kodla üretilir, dosya yok)
 // =============================================================
 
 const Ses = (() => {
