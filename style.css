@@ -32,6 +32,9 @@ label { font-weight: 800; font-size: 14px; }
 #lobiListe li { background: #fff; border: 2px solid #c8d4f0; border-left: 10px solid var(--r); border-radius: 8px; padding: 6px 10px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
 #lobiListe li button { padding: 2px 8px; font-size: 13px; box-shadow: none; background: #ffd8d8; }
 #ayarlar { display: grid; gap: 6px; }
+#motorSatir { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-weight: 800; font-size: 14px; }
+#motorSatir select { padding: 6px 8px; flex: 1; min-width: 150px; }
+#motorSatir a { font-size: 12px; color: #1a4aa8; }
 #ayarlar label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 #ayarlar select { padding: 6px 8px; max-width: 58%; }
 #kurallar { border: 2px solid #0002; border-radius: 10px; padding: 6px 10px 8px; margin: 0; display: grid; gap: 6px; }

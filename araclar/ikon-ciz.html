@@ -6,42 +6,83 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<style>html, body { margin: 0; background: #1a3a6a; overflow: hidden; } canvas { display: block; }</style>
+<style>html, body { margin: 0; background: #3a8ae0; overflow: hidden; } canvas { display: block; }</style>
 </head>
 <body>
 <script>
   const boyut = +(new URLSearchParams(location.search).get('boyut') || 512);
   const c = document.createElement('canvas'); c.width = c.height = boyut; document.body.appendChild(c);
   const g = c.getContext('2d'); g.scale(boyut / 512, boyut / 512);
-  // arka plan: halı halkaları
-  g.fillStyle = '#8a3a4a'; g.fillRect(0, 0, 512, 512);
-  for (let r = 380; r > 20; r -= 44) { g.strokeStyle = (r / 44) % 2 < 1 ? '#e8b86a' : '#3a5a8a'; g.lineWidth = 16; g.beginPath(); g.arc(256, 300, r, 0, 7); g.stroke(); }
-  // cetvel köprü
-  g.save(); g.translate(256, 330); g.rotate(-0.38);
-  g.fillStyle = '#7a5a10'; g.fillRect(-330, -48 + 12, 660, 110);
-  g.fillStyle = '#f7cf3a'; g.fillRect(-330, -48, 660, 110);
-  g.fillStyle = '#3a2a10'; for (let i = -320; i < 330; i += 22) { const u = (i / 22) % 5 === 0 ? 30 : 16; g.fillRect(i, -48, 4, u); g.fillRect(i, 62 - u, 4, u); }
+  const yol = (cizgi, kalin, renk) => { g.strokeStyle = renk; g.lineWidth = kalin; g.lineCap = 'butt'; g.lineJoin = 'round'; g.beginPath(); cizgi(); g.stroke(); };
+
+  // gökyüzü
+  const gok = g.createLinearGradient(0, 0, 0, 512); gok.addColorStop(0, '#2f7fe0'); gok.addColorStop(0.6, '#9fd4ff'); gok.addColorStop(1, '#d8f0ff');
+  g.fillStyle = gok; g.fillRect(0, 0, 512, 512);
+  // güneş ve bulutlar
+  g.fillStyle = '#fff6c8'; g.beginPath(); g.arc(420, 80, 38, 0, 7); g.fill();
+  g.fillStyle = '#ffffffdd'; [[90, 90, 26], [120, 80, 32], [152, 92, 24], [300, 60, 18], [324, 54, 22], [346, 62, 16]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); });
+  // dağlar
+  g.fillStyle = '#5a8a6e'; g.beginPath(); g.moveTo(-20, 300); g.lineTo(90, 170); g.lineTo(190, 300); g.fill();
+  g.fillStyle = '#4a7a5e'; g.beginPath(); g.moveTo(130, 300); g.lineTo(270, 140); g.lineTo(420, 300); g.fill();
+  g.fillStyle = '#5f9473'; g.beginPath(); g.moveTo(340, 300); g.lineTo(460, 190); g.lineTo(560, 300); g.fill();
+  g.fillStyle = '#f4f8ff'; g.beginPath(); g.moveTo(270, 140); g.lineTo(240, 175); g.lineTo(262, 170); g.lineTo(280, 182); g.lineTo(300, 172); g.fill();
+  // çimen
+  const cim = g.createLinearGradient(0, 290, 0, 512); cim.addColorStop(0, '#6ab04a'); cim.addColorStop(1, '#3f8a2e');
+  g.fillStyle = cim; g.fillRect(0, 290, 512, 222);
+  // ağaçlar
+  [[40, 330, 1], [480, 340, 1.1], [445, 315, 0.7], [20, 420, 1.2], [300, 312, 0.6]].forEach(([x, y, k]) => {
+    g.fillStyle = '#6a4a2a'; g.fillRect(x - 4 * k, y, 8 * k, 22 * k);
+    g.fillStyle = '#2f6a34'; g.beginPath(); g.moveTo(x, y - 46 * k); g.lineTo(x - 22 * k, y + 6 * k); g.lineTo(x + 22 * k, y + 6 * k); g.fill();
+  });
+
+  // kıvrılan yol (S şeklinde, yukarı doğru gider)
+  const yolYolu = () => { g.moveTo(60, 560); g.bezierCurveTo(120, 420, 420, 440, 360, 320); g.bezierCurveTo(330, 260, 220, 250, 250, 200); };
+  // beton direkler
+  [[120, 470, 90], [250, 438, 80], [370, 380, 70], [330, 290, 55], [262, 236, 45]].forEach(([x, y, h]) => { g.fillStyle = '#9a9a96'; g.fillRect(x - 9, y, 18, h); g.fillStyle = '#7a7a76'; g.fillRect(x - 9, y, 6, h); });
+  // yol: gölge, beton kenar, beyaz kenar çizgisi, asfalt, sarı orta çizgi
+  yol(yolYolu, 98, '#00000030');
+  yol(yolYolu, 90, '#a8a8a4');
+  yol(yolYolu, 80, '#3c3e44');
+  yol(yolYolu, 68, '#f2f2ee');
+  yol(yolYolu, 60, '#3c3e44');
+  g.setLineDash([22, 20]); yol(yolYolu, 6, '#f2c12e'); g.setLineDash([]);
+  // virajda kırmızı-beyaz bordür
+  g.save(); g.beginPath(); g.rect(280, 270, 200, 160); g.clip();
+  yol(yolYolu, 86, '#f4f4f4'); g.setLineDash([14, 14]); yol(yolYolu, 86, '#d8202a'); g.setLineDash([]);
+  yol(yolYolu, 76, '#3c3e44'); g.setLineDash([22, 20]); yol(yolYolu, 6, '#f2c12e'); g.setLineDash([]);
   g.restore();
-  // oyuncak araba
-  g.save(); g.translate(250, 262); g.rotate(-0.38);
-  g.fillStyle = '#0005'; g.beginPath(); g.ellipse(10, 70, 170, 30, 0, 0, 7); g.fill();
-  g.fillStyle = '#1a1a1a'; [[-95, 48], [95, 48]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 44, 0, 7); g.fill(); });
-  g.fillStyle = '#e8413a'; g.beginPath(); g.roundRect(-170, -30, 340, 90, 30); g.fill();
-  g.fillStyle = '#c82a22'; g.fillRect(-170, 30, 340, 30);
-  g.fillStyle = '#e8413a'; g.beginPath(); g.moveTo(-90, -30); g.lineTo(-55, -100); g.lineTo(60, -100); g.lineTo(100, -30); g.fill();
-  g.fillStyle = '#9ad8ff'; g.beginPath(); g.moveTo(-70, -36); g.lineTo(-46, -86); g.lineTo(-2, -86); g.lineTo(-2, -36); g.fill();
-  g.beginPath(); g.moveTo(10, -36); g.lineTo(10, -86); g.lineTo(52, -86); g.lineTo(82, -36); g.fill();
-  g.fillStyle = '#fff'; g.beginPath(); g.arc(-8, 14, 26, 0, 7); g.fill();
-  g.fillStyle = '#1a2a5a'; g.font = 'bold 36px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('1', -8, 16);
-  g.fillStyle = '#fff6a0'; g.fillRect(156, -10, 16, 22);
-  g.fillStyle = '#e0e0e8'; [[-95, 48], [95, 48]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 20, 0, 7); g.fill(); });
-  // hız çizgileri
-  g.strokeStyle = '#ffffffcc'; g.lineWidth = 10; g.lineCap = 'round'; [[-230, -40, -195], [-250, 0, -200], [-225, 40, -195]].forEach(([x1, y, x2]) => { g.beginPath(); g.moveTo(x1, y); g.lineTo(x2, y); g.stroke(); });
+
+  // beton bariyer
+  g.save(); g.translate(300, 412); g.rotate(-0.15);
+  g.fillStyle = '#b4b4b0'; g.beginPath(); g.moveTo(-30, 12); g.lineTo(30, 12); g.lineTo(22, -10); g.lineTo(-22, -10); g.fill();
+  [['#d8202a', -24], ['#fff', -12], ['#d8202a', 0], ['#fff', 12]].forEach(([r, x]) => { g.fillStyle = r; g.fillRect(x, -4, 12, 6); });
   g.restore();
-  // dama bayrak
-  g.save(); g.translate(400, 70); g.rotate(0.15);
-  g.fillStyle = '#ddd'; g.fillRect(-6, 0, 10, 170);
-  for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) { g.fillStyle = (i + j) % 2 ? '#111' : '#fff'; g.fillRect(4 + i * 16, j * 16, 16, 16); }
+  // mayın (kırmızı ışıklı)
+  g.fillStyle = '#ff606066'; g.beginPath(); g.arc(322, 311, 14, 0, 7); g.fill();
+  g.fillStyle = '#3a4a2a'; g.beginPath(); g.ellipse(322, 318, 16, 7, 0, 0, 7); g.fill();
+  g.fillStyle = '#ff2020'; g.beginPath(); g.arc(322, 312, 5, 0, 7); g.fill();
+
+  // yarış arabası (arkadan, biraz yandan) + nitro alevi
+  g.save(); g.translate(168, 450); g.rotate(-0.32);
+  g.fillStyle = '#0005'; g.beginPath(); g.ellipse(0, 34, 64, 14, 0, 0, 7); g.fill();
+  g.fillStyle = '#4ab0ff'; g.beginPath(); g.moveTo(-12, 26); g.lineTo(12, 26); g.lineTo(0, 70); g.fill();
+  g.fillStyle = '#ffe06a'; g.beginPath(); g.moveTo(-6, 26); g.lineTo(6, 26); g.lineTo(0, 52); g.fill();
+  g.fillStyle = '#161616'; [[-42, 22], [42, 22]].forEach(([x, y]) => { g.beginPath(); g.roundRect(x - 13, y - 14, 26, 30, 6); g.fill(); });
+  g.fillStyle = '#e8413a'; g.beginPath(); g.roundRect(-52, -14, 104, 40, 14); g.fill();
+  g.fillStyle = '#c42a22'; g.fillRect(-52, 12, 104, 14);
+  g.fillStyle = '#e8413a'; g.beginPath(); g.moveTo(-34, -12); g.lineTo(-24, -44); g.lineTo(24, -44); g.lineTo(34, -12); g.fill();
+  g.fillStyle = '#1e2a3a'; g.beginPath(); g.moveTo(-27, -14); g.lineTo(-19, -38); g.lineTo(19, -38); g.lineTo(27, -14); g.fill();
+  g.fillStyle = '#ff2020'; g.fillRect(-46, -4, 18, 8); g.fillRect(28, -4, 18, 8);
+  g.fillStyle = '#fff'; g.fillRect(-14, 4, 28, 10);
+  g.fillStyle = '#1a1a1a'; g.fillRect(-48, -22, 96, 6); g.fillRect(-40, -18, 5, 8); g.fillRect(35, -18, 5, 8);
+  g.restore();
+
+  // bitiş kapısı ve dama bayrak
+  g.fillStyle = '#2a2a30'; g.fillRect(212, 150, 7, 58); g.fillRect(282, 150, 7, 58); g.fillRect(208, 146, 85, 14);
+  for (let i = 0; i < 10; i++) for (let j = 0; j < 2; j++) { g.fillStyle = (i + j) % 2 ? '#111' : '#fff'; g.fillRect(212 + i * 8, 147 + j * 6, 8, 6); }
+  g.save(); g.translate(400, 150); g.rotate(0.12);
+  g.fillStyle = '#ddd'; g.fillRect(-4, 0, 8, 120);
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) { g.fillStyle = (i + j) % 2 ? '#111' : '#fff'; g.fillRect(4 + i * 15, j * 15, 15, 15); }
   g.restore();
 </script>
 </body>
