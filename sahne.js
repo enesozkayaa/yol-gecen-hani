@@ -206,9 +206,27 @@ const Sahne = (() => {
         const bas = kutu(1.4, 0.5, p.w * 0.6, betonM, p.x, p.y - 0.95, p.z); bas.rotation.y = -p.a; g.add(bas);
       });
     };
-    let kosRampa = null;
+    let kosRampa = null, delikKos = null;
+    const delikKapat = (sonI) => {
+      // deliğin iki yanındaki şeritler, deliğin iç duvarları ve sarı-siyah uyarı çizgileri
+      const pts = delikKos.map(i => C[i]); pts.push(C[sonI]);
+      const p0 = pts[0], pN = pts[pts.length - 1], D2 = 1.5, w = p0.w;   // delik 3 m geniş
+      for (const s of [-1, 1]) {
+        const o = (w / 2 + D2) / 2 * s, kb = pts.map(p => ({ ...p, x: p.x - Math.sin(p.a) * o, z: p.z + Math.cos(p.a) * o, w: w / 2 - D2 }));
+        const m = new THREE.Mesh(seritGeo(kb, null, 0.7, 0), asfaltM); m.castShadow = true; m.receiveShadow = true; g.add(m); if (meshler) meshler.push(m);
+      }
+      const orta = { x: (p0.x + pN.x) / 2, y: p0.y, z: (p0.z + pN.z) / 2 }, a = p0.a, uzun = Math.hypot(pN.x - p0.x, pN.z - p0.z);
+      const kap = new THREE.Group(); kap.position.set(orta.x, orta.y, orta.z); kap.rotation.y = -a; g.add(kap);
+      const uyari = new THREE.MeshStandardMaterial({ map: DOKU.uyari, roughness: 0.6 });
+      [[0, -D2 - 0.15, uzun + 0.6, 0.3], [0, D2 + 0.15, uzun + 0.6, 0.3]].forEach(([x, z2, L, W]) => kap.add(kutu(L, 0.04, W, uyari, x, 0.02, z2, false)));
+      [[-uzun / 2 - 0.15, 0], [uzun / 2 + 0.15, 0]].forEach(([x, z2]) => kap.add(kutu(0.3, 0.04, 2 * D2 + 0.6, uyari, x, 0.02, z2, false)));
+      [[0, -D2, uzun, 0.08], [0, D2, uzun, 0.08], [-uzun / 2, 0, 0.08, 2 * D2], [uzun / 2, 0, 0.08, 2 * D2]].forEach(([x, z2, L, W]) => kap.add(kutu(L, 0.7, W, betonM, x, -0.35, z2)));
+      delikKos = null;
+    };
     idx.forEach(i => {
       const p = C[i];
+      if (p.delik) { if (!delikKos) { if (kos.length) { kapat(kosRampa); delikKos = [kos[kos.length - 1]]; } else delikKos = [i]; kos = []; } delikKos.push(i); return; }
+      if (delikKos) { delikKapat(i); kos = [i]; kosRampa = !!p.rampa; return; }
       if (p.bosluk) { if (kos.length) { kos.push(i); kapat(kosRampa); } kos = []; kosRampa = null; return; }
       const r = !!p.rampa;
       if (kos.length && r !== kosRampa) { kos.push(i); kapat(kosRampa); kos = [i]; kosRampa = r; return; }
@@ -486,10 +504,18 @@ const Sahne = (() => {
     return { g, govde, tekerler, kalkan, alev, golge, donus: 0, tozT: 0, renk, onTeker: tekerler.slice(0, 2) };
   }
   function arabaGuncelle(A, s, dt) {
-    A.g.position.set(s.x, s.y, s.z);
+    // yolun eğimine göre arabayı öne/arkaya yatır (tümsekte, yokuşta burun yola gömülmesin)
+    let yY = s.y, hedefEgim = 0;
+    if (sonDunya && !s.havada && !s.dus) {
+      const ux = Math.cos(s.a), uz = Math.sin(s.a);
+      const on = Dunya.zemin(sonDunya, s.x + ux * 1.05, s.z + uz * 1.05, s.y + 1.2), ark = Dunya.zemin(sonDunya, s.x - ux * 1.05, s.z - uz * 1.05, s.y + 1.2);
+      if (on && ark) { hedefEgim = Math.atan2(on.h - ark.h, 2.1); yY = Math.max(s.y, (on.h + ark.h) / 2); }
+    } else if (s.havada) hedefEgim = Math.max(-0.4, Math.min(0.4, Math.atan2(s.vy || 0, Math.max(4, s.hiz || 0)) * 0.6));
+    A.egim = (A.egim || 0) + (hedefEgim - (A.egim || 0)) * Math.min(1, dt * 14);
+    A.g.position.set(s.x, yY, s.z);
     A.g.rotation.y = -s.a;
     A.govde.rotation.x = s.spin || 0;
-    A.govde.rotation.z = s.havada ? Math.max(-0.35, Math.min(0.35, (s.vy || 0) * 0.035)) : (s.egim || 0);
+    A.govde.rotation.z = A.egim;
     A.donus += (s.hiz || 0) * dt / 0.36;
     A.tekerler.forEach(t => { t.rotation.z = -A.donus; });
     A.onTeker.forEach(t => { t.rotation.y = -(s.direksiyon || 0) * 0.45; });

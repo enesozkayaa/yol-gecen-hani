@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 7;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 9;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -691,7 +691,7 @@ const Oyun = (() => {
     O.arabalar.forEach((c, no) => {
       if (no === O.benNo && a) {
         const hiz = Math.hypot(a.vx, a.vz);
-        c.s = { x: a.x, y: a.y, z: a.z, a: a.a, spin: a.spin, hiz, havada: a.havada, vy: a.vy, dus: a.dus, turbo: a.turboT > 0, kayiyor: a.kayiyor > 0.3, kalkan: a.kalkan > 0, bal: a.yerde === 'bal', direksiyon: g.don || 0, egim: -(g.don || 0) * Math.min(1, hiz / 15) * 0.06 };
+        c.s = { x: a.x, y: a.y, z: a.z, a: a.a, spin: a.spin, hiz, havada: a.havada, vy: a.vy, dus: a.dus, turbo: a.turboT > 0, kayiyor: a.kayiyor > 0.3, kalkan: a.kalkan > 0, bal: a.yerde === 'bal', direksiyon: g.don || 0 };
         c.ci = a.ci;
       } else {
         const H = c.hedef, s = c.s, b = H.b || 0;

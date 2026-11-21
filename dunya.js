@@ -34,9 +34,10 @@ const Dunya = (() => {
     sagSpiral:{ ad: 'Yükselen Sağ',     emoji: '🌀', agirlik: 4, acik: 'Tırmanarak sağa döner.', seg: [{ don: 90, R: 12, dh: 4 }], ayna: 'solSpiral' },
     solSpiral:{ ad: 'Yükselen Sol',     emoji: '🌀', agirlik: 4, acik: 'Tırmanarak sola döner.', seg: [{ don: -90, R: 12, dh: 4 }], ayna: 'sagSpiral' },
     atlama:   { ad: 'Atlama Rampası',   emoji: '🛫', agirlik: 5, acik: 'Rampadan uç, boşluğun karşısına kon!', seg: [{ L: 6, dh: 1.6, rampa: true }, { L: 7, dh: -1.6, bosluk: true }, { L: 9 }] },
-    tumsek:   { ad: 'Tümsekli Yol',     emoji: '〽️', agirlik: 6, acik: 'Küçük tümsekler: hızlıysan hoplarsın.', seg: [{ L: 16, dalga: { n: 4, A: 0.55 } }] },
-    dalga:    { ad: 'Dalgalı Yol',      emoji: '🌊', agirlik: 5, acik: 'Büyük dalgalar: tepede havalanırsın!', seg: [{ L: 24, dalga: { n: 2, A: 1.7 } }] },
-    kasis:    { ad: 'Kasis',            emoji: '🔺', agirlik: 5, acik: 'Ortada sert bir tümsek. Hızla geçersen zıplarsın.', seg: [{ L: 10, kasis: { A: 0.8, gen: 2.6 } }] },
+    tumsek:   { ad: 'Tümsekli Yol',     emoji: '〽️', agirlik: 3, acik: 'Küçük tümsekler: hızlıysan hoplarsın.', seg: [{ L: 16, dalga: { n: 3, A: 0.35 } }], engebe: true },
+    dalga:    { ad: 'Dalgalı Yol',      emoji: '🌊', agirlik: 2, acik: 'Büyük dalgalar: tepede havalanırsın!', seg: [{ L: 24, dalga: { n: 2, A: 1.0 } }], engebe: true },
+    kasis:    { ad: 'Kasis',            emoji: '🔺', agirlik: 2, acik: 'Ortada sert bir tümsek. Hızla geçersen zıplarsın.', seg: [{ L: 10, kasis: { A: 0.5, gen: 2.6 } }], engebe: true },
+    delikli:  { ad: 'Delikli Yol',      emoji: '🕳️', agirlik: 3, acik: 'Ortasında kare bir delik var. Sağından ya da solundan geç!', seg: [{ L: 18, delik: 3, delikUz: 5 }], nadir: 2 },
     dar:      { ad: 'Dar Köprü',        emoji: '🌉', agirlik: 4, acik: 'Sadece 3.6 metre genişlik. Dikkat!', seg: [{ L: 14, w: 3.6 }] },
   };
   const YOL_KARTLARI = Object.keys(YOLLAR).filter(k => k !== 'sVirajTers');
@@ -75,7 +76,7 @@ const Dunya = (() => {
   // dizi: yol kartı türleri (sırayla). Başlangıç ve bitiş kendiliğinden eklenir.
   function yolKur(dizi) {
     const c = { x: 0, y: 0, z: 0, a: 0 };
-    const yuzey = [], cizgi = [], segmentler = [];
+    const yuzey = [], cizgi = [], segmentler = [], delikler = [];
     function parca(tur, tanim) {
       const si = segmentler.length, rects = [];
       for (const s of tanim) {
@@ -83,7 +84,18 @@ const Dunya = (() => {
         let dh = s.dh || 0;
         if (c.y + dh < 0) dh = -c.y;
         if (c.y + dh > 36) dh = 36 - c.y;
-        if (!s.don && (s.dalga || s.kasis)) {
+        if (!s.don && s.delik) {
+          // ortası kare delikli düz yol: deliğin önü, arkası ve iki yanı yol
+          const L = s.L, D2 = s.delik / 2, U2 = (s.delikUz || s.delik) / 2, ux = Math.cos(c.a), uz = Math.sin(c.a), sx = -uz, sz = ux;
+          const u0 = L / 2 - U2, u1 = L / 2 + U2, yan = (w / 2 + D2) / 2, yanG = (w / 2 - D2) / 2;
+          const ekle = (um, vm, hu, hv) => { const r = { cx: c.x + ux * um + sx * vm, cz: c.z + uz * um + sz * vm, r: c.a, hu, hv, h0: c.y, h1: c.y, si }; yuzey.push(r); rects.push(r); };
+          ekle(u0 / 2, 0, u0 / 2 + 0.1, w / 2);
+          ekle((u1 + L) / 2, 0, (L - u1) / 2 + 0.1, w / 2);
+          ekle(L / 2, yan, U2 + 0.05, yanG); ekle(L / 2, -yan, U2 + 0.05, yanG);
+          delikler.push({ cx: c.x + ux * L / 2, cz: c.z + uz * L / 2, y: c.y, r: c.a, hu: U2, hv: D2 });
+          for (let t = 0; t < L - 1e-6; t += 0.5) cizgi.push({ x: c.x + ux * t, y: c.y, z: c.z + uz * t, a: c.a, w, si, delik: t > u0 + 0.01 && t < u1 - 0.01, delikYakin: t > u0 - 2 && t < u1 + 2 });
+          c.x += ux * L; c.z += uz * L;
+        } else if (!s.don && (s.dalga || s.kasis)) {
           // tümsekli düz yol: 0.5 m'lik küçük eğimli parçalardan oluşur
           const L = s.L, ux = Math.cos(c.a), uz = Math.sin(c.a), y0 = c.y;
           const prof = t => s.dalga ? s.dalga.A * (1 - Math.cos(2 * PI * s.dalga.n * t / L)) / 2
@@ -154,7 +166,7 @@ const Dunya = (() => {
         }
       }
     });
-    return { yuzey, cizgi, segmentler, bitisI, korkuluk, son: { ...c } };
+    return { yuzey, cizgi, segmentler, bitisI, korkuluk, delikler, son: { ...c } };
   }
 
   // İki döndürülmüş dikdörtgen (yükseklikleriyle) çakışıyor mu?
@@ -282,7 +294,7 @@ const Dunya = (() => {
   function yenidenDog(a, d) {
     const C = d.cizgi;
     let i = Math.max(0, Math.min(a.enIleri, C.length - 1) - 4);
-    const tehlikeli = j => C[j].bosluk || C[j].rampa || d.alan.some(al => al.tip !== 'turbo' && Math.hypot(al.x - C[j].x, al.z - C[j].z) < (al.yr || 2) + 2 && Math.abs(al.y - C[j].y) < 2)
+    const tehlikeli = j => C[j].bosluk || C[j].rampa || C[j].delikYakin || d.alan.some(al => al.tip !== 'turbo' && Math.hypot(al.x - C[j].x, al.z - C[j].z) < (al.yr || 2) + 2 && Math.abs(al.y - C[j].y) < 2)
       || d.hareketli.some(m => Math.hypot(m.cx - C[j].x, m.cz - C[j].z) < 5.5 && Math.abs(m.y0 - C[j].y) < 2)
       || d.engel.some(e => !e.alcak && !e.direk && Math.hypot(e.cx - C[j].x, e.cz - C[j].z) < 3 && Math.abs(e.y0 - C[j].y) < 2);
     for (let k = 0; k < 40 && i > 0 && tehlikeli(i); k++) i--;
@@ -409,8 +421,10 @@ const Dunya = (() => {
     }
     if (a.havada) {
       a.vy -= G * dt; a.y += a.vy * dt; a.spin += a.spinV * dt;
-      const zm = zemin(d, a.x, a.z, a.y + 0.3);
-      if (zm && a.y <= zm.h && a.vy <= 0 && a.y > zm.h - 0.9) {
+      let zm = zemin(d, a.x, a.z, a.y + 0.3);
+      const ust = zemin(d, a.x, a.z, a.y + 2.4);   // tümseğin yükselen yüzüne çarptıysa içinden geçmesin, üstüne çıksın
+      if (ust && ust.s.tumsek && ust.h > a.y && ust.h - a.y < 2.4) { zm = ust; a.vy = Math.min(a.vy, 0); }
+      if (zm && a.y <= zm.h && a.vy <= 0 && a.y > zm.h - (zm.s.tumsek ? 2.4 : 0.9)) {
         const sert = -a.vy;
         a.y = zm.h; a.havada = false; a.vy = 0; a.vyT = 0; a.spinV = 0; a.spin = 0; a.sonY = zm.h;
         ol.push({ tip: 'indi', guc: sert });
@@ -499,17 +513,18 @@ const Dunya = (() => {
         const dx = x - p.x, dz = z - p.z; if (dx * dx + dz * dz > (p.w / 2 + rad + 1) ** 2) continue;
         const yan = dx * -Math.sin(p.a) + dz * Math.cos(p.a), ileri = dx * Math.cos(p.a) + dz * Math.sin(p.a);
         if (Math.abs(ileri) > rad + 1.5) continue;
-        const sinir = p.w / 2 - 1.1;
+        const delikMi = kutu && kutu.delik, sinir = p.w / 2 - (delikMi ? 0.95 : 1.1), pay = delikMi ? 1.0 : 1.4;
         const [lo, hi] = kutu ? yanAralik(kutu.cx, kutu.cz, kutu.r, kutu.hu, kutu.hv, p) : [yan - rad, yan + rad];
-        const sol = lo - 1.4, sag = hi + 1.4;   // engelin solundan ya da sağından geç
+        const sol = lo - pay, sag = hi + pay;   // engelin solundan ya da sağından geç
         let hedef = Math.abs(sol) < Math.abs(sag) ? sol : sag;
-        if (Math.abs(hedef) > sinir) hedef = Math.abs(sol) <= sinir ? sol : Math.abs(sag) <= sinir ? sag : Math.sign(-yan) * sinir;
+        if (Math.abs(hedef) > sinir) hedef = Math.abs(sol) <= sinir ? sol : Math.abs(sag) <= sinir ? sag : (Math.sign(-yan) || 1) * sinir;
         yanHedef = Math.max(-sinir, Math.min(sinir, hedef)); bulundu = true; return;
       }
     };
     for (const al of d.alan) if (al.tip !== 'turbo') dusun(al.x, al.y, al.z, al.yr || 1.5);
     for (const e of d.engel) if (!e.direk && !e.kenar) dusun(e.cx, e.y0, e.cz, Math.max(e.hu, e.hv), e);
     for (const m of d.hareketli) if (m.tip === 'blok') dusun(m.cx, m.y0, m.cz, 2.2);
+    for (const k of d.yol.delikler) dusun(k.cx, k.y, k.cz, k.hu, { cx: k.cx, cz: k.cz, r: k.r, hu: k.hu + 0.4, hv: k.hv, delik: true });
     if (atla) yanHedef = 0;
     bot.yan = (bot.yan || 0) + (yanHedef - (bot.yan || 0)) * Math.min(1, dt * 3);
     const j = Math.min(N - 1, ci + Math.round(atla ? 8 : 4 + sp * 0.35));

@@ -31,26 +31,40 @@ const Ses = (() => {
   let motor = null;
   function motorBaslat() {
     if (!ctx || motor) return;
-    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
-    o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = 50; o2.frequency.value = 25;
-    f.type = 'lowpass'; f.frequency.value = 600; f.Q.value = 2; g.gain.value = 0;
-    const g2 = ctx.createGain(); g2.gain.value = 0.4;
-    o1.connect(f); o2.connect(g2).connect(f); f.connect(g).connect(ana);
-    o1.start(); o2.start();
-    motor = { o1, o2, f, g };
+    // üç katman: gövde (testere), tiz vızıltı (kare), egzoz hırıltısı (gürültü); filtre açık, ses canlı
+    const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), o3 = ctx.createOscillator();
+    const f = ctx.createBiquadFilter(), tepe = ctx.createBiquadFilter(), g = ctx.createGain();
+    o1.type = 'sawtooth'; o2.type = 'square'; o3.type = 'sawtooth';
+    o1.frequency.value = 90; o2.frequency.value = 180; o3.frequency.value = 91.5;
+    f.type = 'lowpass'; f.frequency.value = 2400; f.Q.value = 0.8;
+    tepe.type = 'peaking'; tepe.frequency.value = 1400; tepe.gain.value = 6; tepe.Q.value = 1.2;
+    g.gain.value = 0;
+    const g2 = ctx.createGain(); g2.gain.value = 0.22;
+    const g3 = ctx.createGain(); g3.gain.value = 0.5;
+    o1.connect(f); o2.connect(g2).connect(f); o3.connect(g3).connect(f);
+    if (!gurultuB) { gurultuB = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const dd = gurultuB.getChannelData(0); for (let k = 0; k < dd.length; k++) dd[k] = Math.random() * 2 - 1; }
+    const n = ctx.createBufferSource(), nf = ctx.createBiquadFilter(), ng = ctx.createGain();
+    n.buffer = gurultuB; n.loop = true; nf.type = 'bandpass'; nf.frequency.value = 1800; nf.Q.value = 0.9; ng.gain.value = 0.12;
+    n.connect(nf).connect(ng).connect(f);
+    f.connect(tepe).connect(g).connect(ana);
+    o1.start(); o2.start(); o3.start(); n.start();
+    motor = { o1, o2, o3, f, g, n, nf };
   }
   function motorAyarla(hiz, gaz, turbo) {
     if (!motor || !ctx) return;
-    const t = ctx.currentTime, k = Math.min(1.6, Math.abs(hiz) / 13);
-    const fr = 45 + k * 95 + (gaz > 0 ? 12 : 0) + (turbo ? 40 : 0);
-    motor.o1.frequency.setTargetAtTime(fr, t, 0.06); motor.o2.frequency.setTargetAtTime(fr / 2, t, 0.06);
-    motor.f.frequency.setTargetAtTime(400 + k * 900 + (turbo ? 800 : 0), t, 0.08);
-    motor.g.gain.setTargetAtTime(acik ? 0.05 + k * 0.05 + (gaz > 0 ? 0.03 : 0) : 0, t, 0.1);
+    const t = ctx.currentTime, k = Math.min(1.7, Math.abs(hiz) / 15);
+    // vites hissi: hız arttıkça devir yükselir, belli hızlarda biraz düşer
+    const vites = Math.min(3, Math.floor(k * 3.2)), devir = (k * 3.2 - vites);
+    const fr = 85 + devir * 120 + vites * 30 + (gaz > 0 ? 15 : 0) + (turbo ? 70 : 0);
+    motor.o1.frequency.setTargetAtTime(fr, t, 0.05); motor.o2.frequency.setTargetAtTime(fr * 2, t, 0.05); motor.o3.frequency.setTargetAtTime(fr * 1.012, t, 0.05);
+    motor.f.frequency.setTargetAtTime(1600 + k * 1800 + (turbo ? 1500 : 0), t, 0.08);
+    motor.nf.frequency.setTargetAtTime(1200 + k * 1500, t, 0.08);
+    motor.g.gain.setTargetAtTime(acik ? 0.035 + k * 0.035 + (gaz > 0 ? 0.02 : 0) : 0, t, 0.1);
   }
   function motorDurdur() {
     if (!motor) return;
     const m = motor; motor = null;
-    try { m.g.gain.setTargetAtTime(0, ctx.currentTime, 0.1); setTimeout(() => { try { m.o1.stop(); m.o2.stop(); } catch (e) { } }, 500); } catch (e) { }
+    try { m.g.gain.setTargetAtTime(0, ctx.currentTime, 0.1); setTimeout(() => { try { m.o1.stop(); m.o2.stop(); m.o3.stop(); m.n.stop(); } catch (e) { } }, 500); } catch (e) { }
   }
 
   return {

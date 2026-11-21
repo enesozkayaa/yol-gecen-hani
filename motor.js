@@ -39,8 +39,18 @@ const Motor = (() => {
   }
   function kartUret(tip, n) {
     if (tip === 'yol') {
-      const havuz = D.YOL_KARTLARI.map(k => [k, D.YOLLAR[k]]);
-      return Array.from({ length: n }, () => ({ tur: agirlikliCek(havuz), alan: null }));
+      // nadir yollar (delikli) bütün oyunda en fazla 'nadir' kez gelir, bir seferde en fazla 1 tane
+      M.nadirSayac = M.nadirSayac || {};
+      const havuz = D.YOL_KARTLARI.filter(k => !D.YOLLAR[k].nadir || (M.nadirSayac[k] || 0) < D.YOLLAR[k].nadir).map(k => [k, D.YOLLAR[k]]);
+      const kartlar = [];
+      for (let i = 0; i < n; i++) {
+        let t = agirlikliCek(havuz);
+        if (D.YOLLAR[t].nadir && kartlar.includes(t)) t = 'duz';
+        if (D.YOLLAR[t].engebe && kartlar.some(k => D.YOLLAR[k].engebe)) t = Math.random() < 0.5 ? 'duz' : 'uzun';   // bir elde en fazla 1 engebeli yol
+        kartlar.push(t);
+      }
+      kartlar.forEach(t => { if (D.YOLLAR[t].nadir) M.nadirSayac[t] = (M.nadirSayac[t] || 0) + 1; });
+      return kartlar.map(tur => ({ tur, alan: null }));
     }
     const katlar = M.ayar.katlar || {};
     const havuz = Object.entries(D.TURLER).filter(([, T]) => katlar[T.kat] !== false);
