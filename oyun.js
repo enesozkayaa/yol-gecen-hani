@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 3;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 4;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -308,7 +308,8 @@ const Oyun = (() => {
   function fazGeldi(m) {
     O.faz = m.faz;
     O.fazSon = performance.now() + m.kalan * 1000;
-    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli');
+    $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli');
+    if (O) O.izle = null;
     Sahne.yolHayalet(null);
     $('turSonu').classList.add('gizli');
     surusGoster(false);
@@ -505,7 +506,7 @@ const Oyun = (() => {
   const kanvas = $('sahne');
   const parmaklar = new Map();
   let surukle = null, ikiParmak = null;
-  const kameraSerbest = () => O && O.faz !== 'yaris';
+  const kameraSerbest = () => O && (O.faz !== 'yaris' || O.izle?.mod === 'serbest');
   kanvas.addEventListener('pointerdown', e => {
     Ses.baslat();
     if (!kameraSerbest()) return;
@@ -612,6 +613,8 @@ const Oyun = (() => {
     $('fazYazi').textContent = `🏁 ${O.tur}. yarış`;
     $('yarisBilgi').classList.remove('gizli');
     surusGoster(!!O.ben);
+    O.izle = null; $('izlePanel').classList.add('gizli');
+    O.bitirmeT = null;
     $('ipucu').textContent = O.ben ? 'W/↑ gaz · S/↓ fren · A D / ← → direksiyon · Boşluk nitro · R kurtar' : '';
     $('ipucu').classList.add('surus');
     if (O.ben) Ses.motorBaslat();
@@ -646,6 +649,7 @@ const Oyun = (() => {
           const sira = O.bitenler.length + (O.bitenler.includes(O.benNo) ? 0 : 1);
           Ses.bitis(sira === 1); Sahne.konfeti(a.x, a.y, a.z); Sahne.sarsinti(0.3);
           buyuk(sira === 1 ? '🥇 BİRİNCİ!' : `🏁 ${sira}. oldun!`, sira <= 3 ? `+${[3, 2, 1][sira - 1]} puan` : '+1 puan', 2200);
+          O.bitirmeT = O.yarisT;
           break;
         }
       }
@@ -703,6 +707,7 @@ const Oyun = (() => {
       c.et.visible = no !== O.benNo && !(c.hedef.b & 4);
     });
     O.parcalar.forEach(p => { if (p.tur === 'mayin') Sahne.mayinDurum(p.id, (O.d.mayinKapali.get(p.id) ?? -1) > t); });
+    if (!O.izle && t >= 0 && (!a || (O.bitirmeT != null && t - O.bitirmeT > 2.2))) izlemeyeBasla();
     O.siraT -= dt;
     if (O.siraT <= 0) { O.siraT = 0.25; siraCiz(); }
     const kalan = Math.max(0, (O.yarisSon ?? 0) - Math.max(0, t));
@@ -712,11 +717,9 @@ const Oyun = (() => {
   function siraCiz() {
     const ilerleme = no => { const bi = O.bitenler.indexOf(no); if (bi >= 0) return 1e6 - bi; const c = O.arabalar.get(no); return c ? c.ci : -1; };
     const liste = [...O.arabalar.keys()].map(no => ({ no, u: ilerleme(no) })).sort((x, y) => y.u - x.u);
-    if (!O.ben) {
-      $('siraYazi').innerHTML = '👀 İzliyorsun'; $('gucYazi').textContent = ''; $('hizYazi').textContent = '';
-      const lider = liste.find(x => !O.bitenler.includes(x.no)) || liste[0]; const c = lider && O.arabalar.get(lider.no); if (c) Sahne.kameraTakip(c.s);
-      return;
-    }
+    O.izleListe = liste.map(x => x.no);
+    if (O.izle) izleGuncelle();
+    if (!O.ben) { $('siraYazi').innerHTML = '👀'; $('gucYazi').textContent = ''; $('hizYazi').textContent = ''; return; }
     const benSira = liste.findIndex(x => x.no === O.benNo) + 1;
     $('siraYazi').innerHTML = `${benSira}.<small>/${liste.length}</small>`;
     const a = O.ben;
@@ -724,6 +727,51 @@ const Oyun = (() => {
     const yuzde = Math.min(100, Math.round(a.enIleri / Math.max(1, O.d.bitisI) * 100));
     $('hizYazi').textContent = a.bitti ? '🏁 Bitirdin!' : `${Math.round(Math.hypot(a.vx, a.vz) * 9)} km/s · %${yuzde}`;
   }
+
+  // ---------- Bitirince / arabası olmayınca: arkadaşları izle ya da serbest bakış ----------
+  function izlemeyeBasla() {
+    if (!O || O.faz !== 'yaris' || O.izle) return;
+    O.izle = { mod: 'oyuncu', no: null };
+    $('izlePanel').classList.remove('gizli');
+    surusGoster(false);
+    $('ipucu').textContent = dokun ? '' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
+    izleDegistir(0);
+  }
+  function izleAdaylari() { const l = (O.izleListe || [...O.arabalar.keys()]).filter(no => no !== O.benNo); const devam = l.filter(no => !O.bitenler.includes(no)); return devam.length ? devam : l; }
+  function izleDegistir(yon) {
+    if (!O?.izle) return;
+    const l = izleAdaylari(); if (!l.length) { izleSerbest(true); return; }
+    let i = l.indexOf(O.izle.no);
+    i = i < 0 ? 0 : (i + yon + l.length) % l.length;
+    O.izle.no = l[i]; O.izle.mod = 'oyuncu';
+    const c = O.arabalar.get(O.izle.no); if (c) Sahne.kameraTakip(c.s, true);
+    izlePanelCiz();
+  }
+  function izleSerbest(ac) {
+    if (!O?.izle) return;
+    O.izle.mod = ac ? 'serbest' : 'oyuncu';
+    if (ac) { const c = O.arabalar.get(O.izle.no) || (O.ben && O.arabalar.get(O.benNo)); const s = c ? c.s : O.d.cizgi[0]; Sahne.kameraGenel({ x: s.x, y: s.y, z: s.z }, 45); }
+    else izleDegistir(0);
+    izlePanelCiz();
+  }
+  function izleGuncelle() {
+    // izlediğim oyuncu bitirdiyse sıradakine geç
+    if (O.izle.mod === 'oyuncu' && O.izle.no !== null && O.bitenler.includes(O.izle.no) && izleAdaylari().some(no => !O.bitenler.includes(no))) setTimeout(() => izleDegistir(0), 1500);
+  }
+  function izlePanelCiz() {
+    const serbest = O.izle.mod === 'serbest';
+    $('izleAd').textContent = serbest ? '🎥 Serbest bakış' : `👀 ${ad(O.izle.no)}`;
+    $('izleSerbestBtn').textContent = serbest ? '👀 Oyuncuyu izle' : '🎥 Serbest bakış';
+    $('izleOnceBtn').disabled = $('izleSonraBtn').disabled = false;
+  }
+  $('izleOnceBtn').onclick = () => izleDegistir(-1);
+  $('izleSonraBtn').onclick = () => izleDegistir(1);
+  $('izleSerbestBtn').onclick = () => izleSerbest(O?.izle?.mod !== 'serbest');
+  addEventListener('keydown', e => {
+    if (!O?.izle || O.faz !== 'yaris' || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'q') izleDegistir(-1); else if (k === 'e') izleDegistir(1); else if (k === 'f') izleSerbest(O.izle.mod !== 'serbest');
+  });
 
   // ---------- Puan ----------
   function puanGoster(m) {

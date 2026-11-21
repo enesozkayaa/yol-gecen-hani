@@ -103,6 +103,12 @@ body.dokun #ipucu.surus { display: none; }
 #yerlestirPanel .satir { width: 100%; }
 #yerlestirPanel button { pointer-events: auto; }
 
+/* İzleme */
+#izlePanel { position: absolute; left: 50%; bottom: calc(max(10px, env(safe-area-inset-bottom)) + 28px); transform: translateX(-50%); display: flex; gap: 8px; align-items: center; background: #000b; border-radius: 14px; padding: 6px 8px; pointer-events: auto; white-space: nowrap; }
+#izlePanel span { font-weight: 900; font-size: 16px; min-width: 120px; text-align: center; }
+#izlePanel button { padding: 7px 12px; font-size: 15px; }
+@media (max-height: 500px) { #izlePanel span { font-size: 13px; min-width: 90px; } #izlePanel button { padding: 5px 9px; font-size: 13px; } }
+
 /* Yarış */
 #yarisBilgi { position: absolute; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); display: grid; gap: 4px; }
 body.dokun #yarisBilgi { left: 50%; transform: translateX(-50%); bottom: max(8px, env(safe-area-inset-bottom)); justify-items: center; }
