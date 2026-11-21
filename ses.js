@@ -38,7 +38,7 @@ const Ses = (() => {
     spor:  { ad: 'Spor araba (6 silindir)',    sil: 6, rolanti: 900, kirmizi: 7400, filtre: [650, 2600], gurultu: 0.22, sert: 2, alt: 0.22, turbo: 0, ses: 1 },
     dizel: { ad: 'Kamyonet (dizel)',           sil: 4, rolanti: 700, kirmizi: 4200, filtre: [300, 1000], gurultu: 0.5, sert: 2.8, alt: 0.35, turbo: 0.02, ses: 1.2 },
   };
-  let motorTipi = 'v8';
+  let motorTipi = 'sedan';
   try { if (MOTORLAR[localStorage.getItem('ygh.motor')]) motorTipi = localStorage.getItem('ygh.motor'); } catch (e) { }
   let motor = null;
   const darbeDalgasi = {};
@@ -56,7 +56,7 @@ const Ses = (() => {
   }
   function motorBaslat(tip) {
     if (!ctx || motor) return;
-    const P = MOTORLAR[tip || motorTipi] || MOTORLAR.v8;
+    const P = MOTORLAR[tip || motorTipi] || MOTORLAR.sedan;
     const ana2 = ctx.createGain(); ana2.gain.value = 0;
     const karisim = ctx.createGain();
     // ana patlama sesi
