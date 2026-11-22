@@ -56,7 +56,7 @@ const Motor = (() => {
     const havuz = Object.entries(D.TURLER).filter(([, T]) => katlar[T.kat] !== false);
     if (!havuz.length) havuz.push(['mayin', D.TURLER.mayin]);
     const kartlar = Array.from({ length: n }, () => agirlikliCek(havuz));
-    if (M.kimseBitirmedi && M.parcalar.length) kartlar[n - 1] = Math.random() < 0.5 ? 'bomba' : 'silgi';
+    if (M.kimseBitirmedi && M.parcalar.length && katlar.fayda !== false) kartlar[n - 1] = Math.random() < 0.5 ? 'bomba' : 'silgi';
     return kartlar.map(tur => ({ tur, alan: null }));
   }
   function turBaslat() {
@@ -180,10 +180,11 @@ const Motor = (() => {
       let n;
       if (tur === 'korkuluk') { const p = nokta(0).p, yan = (Math.random() < 0.5 ? -1 : 1) * (p.w / 2 - 0.3); n = { x: p.x - Math.sin(p.a) * yan, y: p.y, z: p.z + Math.cos(p.a) * yan, a: p.a }; }
       else if (tur === 'duvar') n = nokta(rnd(-1.6, 1.6));
-      else if (tur === 'turbo' || tur === 'pervane' || tur === 'cekic') n = nokta(0);
+      else if (['turbo', 'pervane', 'cekic', 'pres', 'ruzgar', 'civi', 'rampa', 'ufo'].includes(tur)) n = nokta(0);
       else n = nokta(rnd(-1.8, 1.8));
       let r = Math.round(n.a / (Math.PI / 4)) * (Math.PI / 4);
       if (tur === 'duvar' || tur === 'blok') r += Math.PI / 2;
+      if (tur === 'ruzgar' && Math.random() < 0.5) r += Math.PI;   // rüzgâr sağa ya da sola üflesin
       if (dene(n.x, n.y, n.z, r)) return;
     }
   }
@@ -206,7 +207,7 @@ const Motor = (() => {
       yerler[o.no] = y;
       const a = D.yeniAraba(y.x, y.y, y.z, y.a);
       const g = M.guc[o.no] || {};
-      a.kalkan = g.kalkan || 0; a.nitro = a.nitroAzami = 2 + (g.nitro || 0) * 4.5;
+      a.kalkan = g.kalkan || 0; a.nitro = a.nitroAzami = 2 + (g.nitro || 0) * 4.5; a.roket = g.roket ? 1 : 0; a.hayalet = g.hayalet ? 1 : 0;
       M.yaris.arabalar[o.no] = a;
       if (o.bot) { a.sinir = zorluk.sinir; M.yaris.botlar[o.no] = { a, no: o.no, hata: zorluk.hata * (0.6 + Math.random() * 0.8) }; }
     });
@@ -226,7 +227,7 @@ const Motor = (() => {
         const ol = D.adim(a, g, M.d, Y.t, h);
         for (const o2 in Y.arabalar) if (o2 !== no) D.arabaCarp(a, Y.arabalar[o2]);
         ol.forEach(o => {
-          if (o.tip === 'mayin') yay({ tip: 'patla', pid: o.pid, no: +no, x: o.x, y: o.y, z: o.z, t: Y.t });
+          if (o.tip === 'mayin' || o.tip === 'kapan') yay({ tip: 'patla', pid: o.pid, no: +no, x: o.x, y: o.y, z: o.z, t: Y.t, kapan: o.tip === 'kapan' });
           else if (o.tip === 'bitis') bitirdi(+no);
         });
       }
@@ -244,7 +245,7 @@ const Motor = (() => {
     if (!kalanlar.length && Y.bitisT === undefined) Y.bitisT = Y.t + 1.5;
     if (Y.t >= Y.son || (Y.bitisT !== undefined && Y.t >= Y.bitisT)) puanFaz();
   }
-  const bayrak = a => (a.havada ? 1 : 0) | (a.dus ? 2 : 0) | (a.bitti ? 4 : 0) | (a.turboT > 0 ? 8 : 0) | (a.kayiyor > 0.3 ? 16 : 0) | (a.kalkan > 0 ? 32 : 0) | (a.yerde === 'bal' ? 64 : 0);
+  const bayrak = a => (a.havada ? 1 : 0) | (a.dus ? 2 : 0) | (a.bitti ? 4 : 0) | (a.turboT > 0 ? 8 : 0) | (a.kayiyor > 0.3 ? 16 : 0) | (a.kalkan > 0 ? 32 : 0) | (a.yerde === 'bal' ? 64 : 0) | (a.hayalet ? 128 : 0);
   function bitirdi(no) {
     const Y = M.yaris;
     if (Y.bitenler.includes(no)) return;
@@ -315,14 +316,15 @@ const Motor = (() => {
     else if (m.tip === 'imlec' && M.faz === 'yerlestir') { const im = { tip: 'imlec', no, x: m.x, y: m.y, z: m.z, r: m.r }; if (cikisFn.digerlerine) cikisFn.digerlerine(id, im); else yay(im); }
     else if (m.tip === 'ben' && M.faz === 'yaris' && Array.isArray(m.d)) {
       const a = M.yaris.arabalar[no]; if (!a) return;
-      const [x, y, z, aci, spin, b, vx, vz, ci] = m.d;
-      Object.assign(a, { x, y, z, a: aci, spin, vx: vx || 0, vz: vz || 0, ci: ci || 0, havada: !!(b & 1), dus: b & 2 ? 1 : 0, turboT: b & 8 ? 1 : 0, kayiyor: b & 16 ? 1 : 0, kalkan: b & 32 ? 1 : 0, yerde: b & 64 ? 'bal' : 'yol' });
+      const [x, y, z, aci, spin, b, vx, vz, ci] = m.d.map(Number);
+      if (![x, y, z, aci].every(Number.isFinite)) return;   // bozuk mesaj yarışı kilitlemesin
+      Object.assign(a, { x, y, z, a: aci, spin: spin || 0, vx: vx || 0, vz: vz || 0, ci: Math.max(0, ci | 0), havada: !!(b & 1), dus: b & 2 ? 1 : 0, turboT: b & 8 ? 1 : 0, kayiyor: b & 16 ? 1 : 0, kalkan: b & 32 ? 1 : 0, yerde: b & 64 ? 'bal' : 'yol', hayalet: b & 128 ? 1 : 0 });
     }
     else if (m.tip === 'mayin' && M.faz === 'yaris') {
       const Y = M.yaris, kap = M.d.mayinKapali.get(m.pid) ?? -1;
       if (kap > Y.t + 0.6) return;
       M.d.mayinKapali.set(m.pid, Y.t + 4);
-      yay({ tip: 'patla', pid: m.pid, no, x: m.x, y: m.y, z: m.z, t: Y.t });
+      yay({ tip: 'patla', pid: m.pid, no, x: +m.x || 0, y: +m.y || 0, z: +m.z || 0, t: Y.t, kapan: !!m.kapan });
     }
     else if (m.tip === 'bitir' && M.faz === 'yaris') bitirdi(no);
   }
@@ -331,6 +333,7 @@ const Motor = (() => {
     const o = M.oyuncular.find(x => x.id === id && !x.bot);
     if (!o) return;
     o.cikti = true;
+    if (M.yaris) { delete M.yaris.arabalar[o.no]; delete M.yaris.botlar[o.no]; }
     yay({ tip: 'cikti', no: o.no });
     if (M.faz === 'secim' && aktifler().every(x => M.secim.aldi[x.no] !== undefined)) secimBitti();
     if (M.faz === 'yolKoy') { M.yolKoydu[o.no] = true; yolKoyBittiMi(); }

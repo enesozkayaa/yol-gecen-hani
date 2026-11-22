@@ -78,13 +78,24 @@ const Dunya = (() => {
     bomba:    { ad: 'Bomba',            emoji: '💣', kat: 'fayda',  agirlik: 4, acik: 'Çevresindeki bütün tuzakları patlatır.' },
     kalkan:   { ad: 'Kalkan',           emoji: '🛡️', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta ilk tuzak sana işlemez.', kisisel: true },
     nitro:    { ad: 'Nitro',            emoji: '🔥', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta nitro deposu çok daha dolu.', kisisel: true },
+    // --- v15 yeni eşyalar ---
+    pres:     { ad: 'Ezici Pres',       emoji: '🗜️', kat: 'engel',  agirlik: 5, acik: 'Yolun üstünde inip kalkar. Altında kalanı geri fırlatır: zamanlayıp geç!' },
+    ruzgar:   { ad: 'Rüzgâr Makinesi',  emoji: '🌬️', kat: 'engel',  agirlik: 5, acik: 'Dev pervane arabayı yolun kenarına doğru üfler.' },
+    buz:      { ad: 'Buz Pisti',        emoji: '🧊', kat: 'kaygan', agirlik: 5, acik: 'Kocaman buz: fren de direksiyon da neredeyse hiç tutmaz.' },
+    civi:     { ad: 'Çivi Şeridi',      emoji: '📍', kat: 'kaygan', agirlik: 5, acik: 'Lastik patlar: 4 saniye yavaş ve yalpalayarak gidersin.' },
+    kapan:    { ad: 'Ayı Kapanı',       emoji: '🪤', kat: 'patlar', agirlik: 5, acik: 'Basan araba 1,5 saniye kıpırdayamaz. Sonra yeniden kurulur.' },
+    ters:     { ad: 'Ters Direksiyon',  emoji: '🔀', kat: 'patlar', agirlik: 4, acik: 'Üstünden geçenin direksiyonu 3 saniye ters döner!' },
+    ufo:      { ad: 'UFO Işını',        emoji: '🛸', kat: 'patlar', agirlik: 4, acik: 'Altından geçeni kapıp 25 metre geri bırakır.' },
+    rampa:    { ad: 'Mini Rampa',       emoji: '🛹', kat: 'fayda',  agirlik: 5, acik: 'Yola küçük bir rampa koyar: üstünden uçup tuzakları aşarsın.' },
+    roket:    { ad: 'Roket Kalkış',     emoji: '🚀', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta başlar başlamaz 2,5 saniye roket gibi gidersin.', kisisel: true },
+    hayalet:  { ad: 'Hayalet Araba',    emoji: '👻', kat: 'fayda',  agirlik: 4, acik: 'Sonraki yarışta öteki arabalar içinden geçer, kimse seni itemez.', kisisel: true },
   };
   const KATLAR = {
     yol: { ad: 'Yol', renk: '#3a6ad8' }, engel: { ad: 'Engel', renk: '#e0603a' },
     kaygan: { ad: 'Kaygan', renk: '#b8862a' }, patlar: { ad: 'Patlayan', renk: '#d03a8a' },
     fayda: { ad: 'Fayda', renk: '#2aa860' },
   };
-  const SILGI_R = 2, BOMBA_R = 7;
+  const SILGI_R = 2, BOMBA_R = 7, PRES_UST = 3.2;
 
   // ---------- Yardımcılar ----------
   const yerel = (cx, cz, r, x, z) => { const dx = x - cx, dz = z - cz, c = Math.cos(r), s = Math.sin(r); return [dx * c + dz * s, -dx * s + dz * c]; };
@@ -255,6 +266,17 @@ const Dunya = (() => {
       case 'mayin': S.alan.push({ tip: 'mayin', x, z, y, yr: 0.9, pid: p.id }); break;
       case 'yay': S.alan.push({ tip: 'yay', x, z, y, yr: 1.3 }); break;
       case 'turbo': S.alan.push({ tip: 'turbo', x, z, y, r, hu: 2, hv: 1.5 }); break;
+      case 'pres': {
+        for (const v of [-3.9, 3.9]) { const [a, b] = dunyaya(x, z, r, 0, v); S.engel.push({ cx: a, cz: b, r, hu: 0.3, hv: 0.3, ust: 5, y0: y, direk: true }); }
+        S.hareketli.push({ tip: 'pres', cx: x, cz: z, r, faz, y0: y }); break;
+      }
+      case 'ruzgar': S.alan.push({ tip: 'ruzgar', x, z, y, r, hu: 2.5, hv: 3.6 }); break;
+      case 'buz': S.alan.push({ tip: 'buz', x, z, y, yr: 3.2 }); break;
+      case 'civi': S.alan.push({ tip: 'civi', x, z, y, r, hu: 0.5, hv: 2.6 }); break;
+      case 'kapan': S.alan.push({ tip: 'kapan', x, z, y, yr: 0.8, pid: p.id }); break;
+      case 'ters': S.alan.push({ tip: 'ters', x, z, y, yr: 1.3 }); break;
+      case 'ufo': S.alan.push({ tip: 'ufo', x, z, y, yr: 1.4, pid: p.id }); break;
+      case 'rampa': S.yuzey.push({ cx: x, cz: z, r, hu: 1.7, hv: 1.6, h0: y, h1: y + 0.8, rampa: true, mini: true }); break;
     }
     return S;
   }
@@ -285,6 +307,11 @@ const Dunya = (() => {
     if (m.tip === 'pervane') return { aci: m.r + m.yon * (t * 1.1 + m.faz) };
     if (m.tip === 'cekic') { const s = Math.sin(t * 1.9 + m.faz); const [x, z] = dunyaya(m.cx, m.cz, m.r, 0, s * 3.2); return { x, z, s, hiz: Math.cos(t * 1.9 + m.faz) }; }
     if (m.tip === 'blok') { const off = Math.sin(t * 1.2 + m.faz) * 2.4; const [x, z] = dunyaya(m.cx, m.cz, m.r, off, 0); return { x, z, hiz: Math.cos(t * 1.2 + m.faz) }; }
+    if (m.tip === 'pres') {   // 3.2 sn'lik döngü: bekler, hızla iner, biraz durur, yavaşça kalkar
+      const f = ((t / 3.2 + m.faz / 6.283) % 1 + 1) % 1;
+      const h = f < 0.55 ? PRES_UST : f < 0.62 ? PRES_UST * (1 - ((f - 0.55) / 0.07) ** 2) : f < 0.8 ? 0 : PRES_UST * (f - 0.8) / 0.2;
+      return { x: m.cx, z: m.cz, h };
+    }
     return {};
   }
 
@@ -320,18 +347,22 @@ const Dunya = (() => {
   // ---------- Araba ----------
   function yeniAraba(x, y, z, a) {
     return { x, y, z, a, vx: 0, vz: 0, vy: 0, vyT: 0, havada: false, dus: 0, dusT: 0, turboT: 0, nitro: 0, kalkan: 0,
-      ci: 0, enIleri: 0, sonY: y, spin: 0, spinV: 0, sersem: 0, bitti: false, kayiyor: 0, yerde: 'yol', rampada: false };
+      ci: 0, enIleri: 0, sonY: y, spin: 0, spinV: 0, sersem: 0, bitti: false, kayiyor: 0, yerde: 'yol', rampada: false, patlakT: 0, tersT: 0, ufoT: 0, roket: 0, hayalet: 0 };
   }
-  function yenidenDog(a, d) {
+  function guvenliGeri(d, i) {   // i'den geriye doğru ilk güvenli orta çizgi noktası
     const C = d.cizgi;
-    let i = Math.max(0, Math.min(a.enIleri, C.length - 1) - 4);
     // deliğin hemen önünde ortada doğan araba yana kaçamaz: deliğe 9 m'den yakın yerde doğma
     const tehlikeli = j => C[j].bosluk || C[j].rampa || C[j].delikYakin || d.yol.delikler.some(k => Math.hypot(k.cx - C[j].x, k.cz - C[j].z) < k.hu + 9 && Math.abs(k.y - C[j].y) < 2) || d.alan.some(al => al.tip !== 'turbo' && Math.hypot(al.x - C[j].x, al.z - C[j].z) < (al.yr || 2) + 2 && Math.abs(al.y - C[j].y) < 2)
       || d.hareketli.some(m => Math.hypot(m.cx - C[j].x, m.cz - C[j].z) < 5.5 && Math.abs(m.y0 - C[j].y) < 2)
       || d.engel.some(e => !e.alcak && !e.direk && Math.hypot(e.cx - C[j].x, e.cz - C[j].z) < 3 && Math.abs(e.y0 - C[j].y) < 2);
     for (let k = 0; k < 40 && i > 0 && tehlikeli(i); k++) i--;
+    return i;
+  }
+  function yenidenDog(a, d) {
+    const C = d.cizgi;
+    const i = guvenliGeri(d, Math.max(0, Math.min(a.enIleri, C.length - 1) - 4));
     const p = C[i];
-    Object.assign(a, { x: p.x, z: p.z, y: p.y + 0.6, a: p.a, vx: 0, vz: 0, vy: 0, vyT: 0, havada: true, dus: 0, dusT: 0, spin: 0, spinV: 0, sersem: 0, turboT: 0, ci: i, sonY: p.y, rampada: false });
+    Object.assign(a, { x: p.x, z: p.z, y: p.y + 0.6, a: p.a, vx: 0, vz: 0, vy: 0, vyT: 0, havada: true, dus: 0, dusT: 0, spin: 0, spinV: 0, sersem: 0, turboT: 0, ci: i, sonY: p.y, rampada: false, tersT: 0 });
   }
   function vur(a, nx, nz, guc, yuk, ol, tip) {
     if (a.kalkan > 0) { a.kalkan = 0; a.vx = nx * 5; a.vz = nz * 5; ol.push({ tip: 'kalkan' }); return; }
@@ -339,17 +370,23 @@ const Dunya = (() => {
     ol.push({ tip: tip || 'vurdu' });
   }
 
+  const kalkanYer = (a, ol) => { if (a.kalkan > 0) { a.kalkan = 0; a.koruT = 1; ol.push({ tip: 'kalkan' }); return true; } return false; };
   // Bir adım. g = { gaz: -1..1, don: -1..1, turbo }. t = yarış zamanı. ol: olay listesi
   function adim(a, g, d, t, dt, ol = []) {
     if (a.bitti && !a.havada && Math.hypot(a.vx, a.vz) < 0.3) return ol;
     a.sersem -= dt; a.turboT -= dt;
+    if (a.patlakT > 0) a.patlakT -= dt;
+    if (a.tersT > 0) a.tersT -= dt;
+    if (a.ufoT > 0) a.ufoT -= dt;
+    if (a.koruT > 0) a.koruT -= dt;   // kalkan az önce bir tuzağı yuttuysa aynı tuzak hemen tekrar işlemesin
+    if (a.roket && t >= 0) { a.roket = 0; a.turboT = Math.max(a.turboT, 2.5); ol.push({ tip: 'roket' }); }
     if (a.dus > 0) {   // düşüyor: aşağıdaki çimene çakılınca yeniden doğar
       if (a.y > ZEMIN_Y + 0.5) { a.vy -= G * dt; a.y += a.vy * dt; a.x += a.vx * dt * 0.7; a.z += a.vz * dt * 0.7; a.spin += a.spinV * dt; if (a.y <= ZEMIN_Y + 0.5) { a.y = ZEMIN_Y + 0.5; ol.push({ tip: 'cakildi', x: a.x, z: a.z }); } }
       else { a.dusT += dt; if (a.dusT > 0.7) { yenidenDog(a, d); ol.push({ tip: 'dogdu' }); } }
       return ol;
     }
     let fx = Math.cos(a.a), fz = Math.sin(a.a);
-    let tutus = 7, hizCarp = 1, ivme = 1;
+    let tutus = 7, hizCarp = 1, ivme = 1, fren = 1;
     a.kayiyor = 0; a.yerde = 'yol';
     for (const al of d.alan) {
       if (Math.abs(a.y - al.y) > 0.7) continue;
@@ -368,6 +405,31 @@ const Dunya = (() => {
         vur(a, Math.cos(aci) * 0.4 - fx * 0.6, Math.sin(aci) * 0.4 - fz * 0.6, 6, 10.5, ol, 'patladi');
       }
       else if (al.tip === 'yay' && !a.havada) { a.vy = 10.5; a.vx *= 0.75; a.vz *= 0.75; a.havada = true; a.spinV = 0; ol.push({ tip: 'yay' }); }
+      else if (al.tip === 'buz') { tutus = 0.12; ivme = 0.25; fren = 0.12; a.kayiyor = 1; a.yerde = 'buz'; }
+      else if (al.tip === 'ruzgar') {   // parçanın sağ tarafına (+v) doğru üfler; havadayken de
+        const px = -Math.sin(al.r), pz = Math.cos(al.r);
+        a.x += px * 4 * dt; a.z += pz * 4 * dt; a.vx += px * 9 * dt; a.vz += pz * 9 * dt;
+        if (!a.ruzgarT || t - a.ruzgarT > 1) ol.push({ tip: 'ruzgar' });
+        a.ruzgarT = t;
+      }
+      else if (al.tip === 'kapan' && !a.havada) {
+        if ((d.mayinKapali.get(al.pid) ?? -1) > t || (a.kapanT ?? -99) > t) continue;
+        d.mayinKapali.set(al.pid, t + 4);
+        a.kapanT = t + 6;   // kurtulana kadar aynı arabayı tekrar yakalamasın
+        const yakalandi = !kalkanYer(a, ol);
+        ol.push({ tip: 'kapan', pid: al.pid, x: al.x, y: al.y, z: al.z, yakalandi });
+        if (yakalandi) { a.vx = 0; a.vz = 0; a.sersem = 1.5; a.x = al.x; a.z = al.z; }
+      }
+      else if (al.tip === 'civi' && !a.havada && !(a.patlakT > 0) && !(a.koruT > 0)) { if (!kalkanYer(a, ol)) { a.patlakT = 4; ol.push({ tip: 'patlak' }); } }
+      else if (al.tip === 'ters' && !a.havada && !(a.tersT > 0) && !(a.koruT > 0)) { if (!kalkanYer(a, ol)) { a.tersT = 3; ol.push({ tip: 'ters' }); } }
+      else if (al.tip === 'ufo' && !a.havada && !(a.ufoT > 0) && !(a.koruT > 0) && !(a.ufoGordu || []).includes(al.pid)) {
+        a.ufoT = 3; (a.ufoGordu ||= []).push(al.pid);   // her UFO bir arabayı yarışta bir kez kapar (sonsuz döngü olmasın)
+        if (kalkanYer(a, ol)) continue;
+        const C = d.cizgi, i = guvenliGeri(d, Math.max(3, a.ci - 25)), P = C[i];   // deliğe/tuzağa bırakmasın
+        ol.push({ tip: 'ufo', x0: a.x, y0: a.y, z0: a.z });
+        Object.assign(a, { x: P.x, z: P.z, y: P.y + 2.5, a: P.a, vx: 0, vz: 0, vy: 0, vyT: 0, havada: true, ci: i, sonY: P.y, spin: 0, spinV: 0, rampada: false });
+        return ol;
+      }
     }
     // sürüş
     if (!a.havada) {
@@ -375,12 +437,12 @@ const Dunya = (() => {
       // nitro: basılı tuttukça depo azalır, bırakınca kalanı sonraya kalır
       if (g.turbo && a.nitro > 0) { if (!a.nitroYaniyor) ol.push({ tip: 'nitro' }); a.nitroYaniyor = true; a.nitro = Math.max(0, a.nitro - dt); a.turboT = Math.max(a.turboT, 0.12); }
       else a.nitroYaniyor = false;
-      const azami = AZAMI_HIZ * hizCarp * (a.turboT > 0 ? 1.6 : 1) * (a.sinir || 1);
+      const azami = AZAMI_HIZ * hizCarp * (a.turboT > 0 ? 1.6 : 1) * (a.sinir || 1) * (a.patlakT > 0 ? 0.55 : 1);
       const kontrol = a.sersem > 0 || a.bitti ? 0 : 1;
       const gaz = g.gaz * kontrol;
       if (a.turboT > 0 && kontrol && gaz >= 0) f = Math.min(azami, f + 45 * dt);
       else if (gaz > 0) { if (f < azami) f = Math.min(azami, f + 26 * gaz * ivme * dt); else f -= (f - azami) * 4 * dt; }
-      else if (gaz < 0) { if (f > 0.5) f -= 40 * dt; else f = Math.max(-7 * hizCarp, f - 18 * ivme * dt); }
+      else if (gaz < 0) { if (f > 0.5) f -= 40 * fren * dt; else f = Math.max(-7 * hizCarp, f - 18 * ivme * dt); }
       else f -= f * (a.bitti ? 3 : 1.1) * dt;
       if (f > azami + 0.5 && a.turboT <= 0) f -= (f - azami) * 4 * dt;
       // yokuşta yerçekimi
@@ -388,7 +450,8 @@ const Dunya = (() => {
       if (zm0 && zm0.s.h0 !== zm0.s.h1) { const egim = (zm0.s.h1 - zm0.s.h0) / (2 * zm0.s.hu), yon = Math.cos(a.a - zm0.s.r); f -= egim * yon * 9 * dt; }
       if (Math.abs(l) > 4 && tutus > 2) a.kayiyor = Math.max(a.kayiyor, Math.min(1, (Math.abs(l) - 4) / 6));
       l *= Math.exp(-tutus * dt);
-      const donus = g.don * kontrol * 2.5 * Math.max(-1, Math.min(1, f / 5)) * (tutus < 1 ? 0.6 : 1) * (Math.abs(f) > 11 ? 0.85 : 1);
+      const donGir = (a.tersT > 0 ? -g.don : g.don) + (a.patlakT > 0 ? Math.sin(t * 9) * 0.35 : 0);   // ters direksiyon / patlak lastik yalpası
+      const donus = donGir * kontrol * 2.5 * Math.max(-1, Math.min(1, f / 5)) * (tutus < 1 ? 0.6 : 1) * (Math.abs(f) > 11 ? 0.85 : 1);
       a.a += donus * dt;
       fx = Math.cos(a.a); fz = Math.sin(a.a);
       a.vx = fx * f - fz * l; a.vz = fz * f + fx * l;
@@ -422,6 +485,15 @@ const Dunya = (() => {
         const [vx, vz] = [-Math.sin(m.r), Math.cos(m.r)], yon = Math.sign(hd.hiz) || 1;
         a.x += vx * yon * 0.8; a.z += vz * yon * 0.8;
         vur(a, vx * yon, vz * yon, 11, 6, ol);
+      } else if (m.tip === 'pres') {
+        if (a.y > m.y0 + 1.6 || hd.h > 1.3 || (a.presT ?? -99) > t) continue;
+        const c = daireKutu(a.x, a.z, ARABA_R * 0.6, m.cx, m.cz, m.r, 1.5, 3.6);
+        if (!c) continue;
+        const ux = Math.cos(m.r), uz = Math.sin(m.r), [u, v] = yerel(m.cx, m.cz, m.r, a.x, a.z);
+        const yon = u >= 0 ? 1 : -1, cik = 1.5 + ARABA_R + 0.2;   // bulunduğu tarafa, presin tamamen dışına
+        [a.x, a.z] = dunyaya(m.cx, m.cz, m.r, yon * cik, v);
+        a.presT = t + 1.2;
+        vur(a, ux * yon, uz * yon, 9, 5, ol, 'ezildi');
       } else if (m.tip === 'blok') {
         if (a.y > m.y0 + 1.5) continue;
         const c = daireKutu(a.x, a.z, ARABA_R, hd.x, hd.z, m.r, 1.1, 1.1);
@@ -440,12 +512,12 @@ const Dunya = (() => {
       const yatay = Math.max(1, Math.hypot(a.vx, a.vz));
       if (zm && zm.h >= a.y - 0.45 && zm.s.tumsek && a.vyT > 0.8 && (zm.h - a.y) / dt < a.vyT - G * (0.5 / yatay) * 1.2) {
         a.havada = true; a.vy = Math.min(a.vyT, 4.2); a.rampada = false; ol.push({ tip: 'havalandi', yuk: a.vy });   // tümsekten uçtu
-      } else if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && (a.vx * Math.cos(zm.s.r) + a.vz * Math.sin(zm.s.r)) > 1.5; }
+      } else if (zm && zm.h >= a.y - 0.45) { const yeni = zm.h; a.vyT = (yeni - a.y) / dt; a.y = yeni; a.sonY = yeni; a.rampada = !!zm.s.rampa && (a.vx * Math.cos(zm.s.r) + a.vz * Math.sin(zm.s.r)) > 1.5; a.rampaMini = !!zm.s.mini; }
       else {
         a.havada = true; a.vy = Math.max(0, a.vyT) * 1.1;
         if (a.rampada) {
-          const f = a.vx * Math.cos(a.a) + a.vz * Math.sin(a.a), ek = Math.max(0, 13 - f);
-          a.vx += Math.cos(a.a) * ek; a.vz += Math.sin(a.a) * ek; a.vy = Math.max(a.vy, 6.5);
+          const f = a.vx * Math.cos(a.a) + a.vz * Math.sin(a.a), ek = Math.max(0, (a.rampaMini ? 9 : 13) - f);
+          a.vx += Math.cos(a.a) * ek; a.vz += Math.sin(a.a) * ek; a.vy = Math.max(a.vy, a.rampaMini ? 5 : 6.5);
         }
         a.rampada = false;
         ol.push({ tip: 'havalandi', yuk: a.vy });
@@ -472,7 +544,7 @@ const Dunya = (() => {
   }
 
   function arabaCarp(a, b, ol) {
-    if (a.dus > 0 || b.dus > 0 || a.bitti || b.bitti || Math.abs(a.y - b.y) > 1) return;
+    if (a.dus > 0 || b.dus > 0 || a.bitti || b.bitti || a.hayalet || b.hayalet || Math.abs(a.y - b.y) > 1) return;
     const dx = a.x - b.x, dz = a.z - b.z, dd = Math.hypot(dx, dz), en = ARABA_R * 2;
     if (dd >= en || dd < 1e-4) return;
     const nx = dx / dd, nz = dz / dd;
@@ -499,11 +571,23 @@ const Dunya = (() => {
     if (zm.s.rampa) return 'Rampanın üstüne konmaz';
     const i = ilerlemeBul(d, x, zm.h, z);
     if (i < 0) return 'Yolun üstüne koymalısın';
+    // atlama rampasının hemen önünde yavaşlatan tuzak olursa kimse karşıya atlayamaz
+    if (['yag', 'bal', 'buz', 'civi', 'kapan', 'duvar', 'blok', 'pervane', 'cekic', 'pres', 'ruzgar', 'rampa', 'ufo', 'mayin', 'ters'].includes(tur))
+      for (let j = Math.max(0, i - 3); j < Math.min(d.cizgi.length, i + 14); j++) if (d.cizgi[j].rampa || d.cizgi[j].bosluk) return 'Atlama rampasının önüne konmaz';
     if (i < BAS_UZ + 2) return 'Başlangıca çok yakın';
     if (i > d.bitisI - 6) return 'Bitişe çok yakın';
     if (tur === 'duvar' || tur === 'korkuluk') {
-      const P = d.cizgi[i], [lo, hi] = yanAralik(x, z, r, tur === 'duvar' ? 2.2 : 3, tur === 'duvar' ? 0.55 : 0.2, P);
-      if (Math.max(lo + P.w / 2, P.w / 2 - hi) < 2.7) return 'Yanında araba geçecek yer kalmalı';
+      // virajda düz bariyer yolu daha çok kapatır: bariyerin boyunca birkaç noktada geçiş payına bak
+      const hu = tur === 'duvar' ? 2.2 : 3, hv = tur === 'duvar' ? 0.55 : 0.2;
+      for (let j = Math.max(0, i - 4); j <= Math.min(d.cizgi.length - 1, i + 4); j++) {
+        const P = d.cizgi[j];
+        if (Math.abs(P.y - zm.h) > 1.5) continue;
+        const ileri = (x - P.x) * Math.cos(P.a) + (z - P.z) * Math.sin(P.a);
+        if (Math.abs(ileri) > hu + 1) continue;
+        const [lo, hi] = yanAralik(x, z, r, hu, hv, P);
+        if (hi < -P.w / 2 || lo > P.w / 2) continue;
+        if (Math.max(lo + P.w / 2, P.w / 2 - hi) < 2.7) return 'Yanında araba geçecek yer kalmalı';
+      }
     }
     for (const p of d.parcalar) {
       const dd = Math.hypot(p.x - x, p.z - z), dy = Math.abs((p.y || 0) - zm.h);
@@ -554,7 +638,8 @@ const Dunya = (() => {
         yanHedef = Math.max(-sinir, Math.min(sinir, hedef)); bulundu = true; return;
       }
     };
-    for (const al of d.alan) if (al.tip !== 'turbo') dusun(al.x, al.y, al.z, al.yr || 1.5);
+    for (const al of d.alan) if (al.tip !== 'turbo' && al.tip !== 'ruzgar') dusun(al.x, al.y, al.z, al.yr || (al.hu ? Math.max(al.hu, al.hv) : 1.5), al.hu ? { cx: al.x, cz: al.z, r: al.r, hu: al.hu, hv: al.hv } : null);
+    for (const y of d.yuzey) if (y.mini) dusun(y.cx, y.h0, y.cz, 1.7, { cx: y.cx, cz: y.cz, r: y.r, hu: y.hu, hv: y.hv });   // mini rampaya yandan çarpmasın
     for (const e of d.engel) if (!e.direk && !e.kenar) dusun(e.cx, e.y0, e.cz, Math.max(e.hu, e.hv), e);
     for (const m of d.hareketli) if (m.tip === 'blok') dusun(m.cx, m.y0, m.cz, 2.2);
     for (const k of d.yol.delikler) dusun(k.cx, k.y, k.cz, k.hu, { cx: k.cx, cz: k.cz, r: k.r, hu: k.hu + 0.4, hv: k.hv, delik: true });
@@ -578,12 +663,21 @@ const Dunya = (() => {
     if (delikVar && sp > 10) gaz = Math.min(gaz, 0.2);
     // hareketli tuzak önümdeyse bekle
     if (!atla) for (const m of d.hareketli) {
-      if (m.tip === 'blok' || Math.abs(m.y0 - a.y) > 2) continue;
+      if (Math.abs(m.y0 - a.y) > 2) continue;
       const mu = Math.hypot(m.cx - a.x, m.cz - a.z);
       if (mu > 10) continue;
+      if (m.tip === 'pres') {   // pres inikken ya da inecekken altına girme
+        const [u0] = yerel(m.cx, m.cz, m.r, a.x, a.z);
+        if (Math.abs(u0) < 2.6) { gaz = 1; continue; }
+        const varis = Math.max(0.15, (Math.abs(u0) + 1.6) / Math.max(4, sp));
+        const icinde = [1.5, 3, 4.5].some(l => { const [u, v] = yerel(m.cx, m.cz, m.r, a.x + Math.cos(a.a) * l, a.z + Math.sin(a.a) * l); return Math.abs(u) < 2.6 && Math.abs(v) < 3.6; });
+        if (icinde && [0, 0.3, 0.6, varis].some(k => hareketliDurum(m, t + k).h < 1.6)) { bot.bekle = (bot.bekle || 0) + dt; if (bot.bekle < 5) return { gaz: sp > 1 ? -0.5 : 0, don: 0 }; }
+        continue;
+      }
       if (mu < (m.tip === 'pervane' ? 3.9 : 3.8)) { gaz = 1; continue; }
       const yakin = [1.5, 3, 4.5].map(l => [a.x + Math.cos(a.a) * l, a.z + Math.sin(a.a) * l]);
-      const tehlike = yakin.some(([px, pz]) => [t, t + 0.35].some(tt => {
+      const zamanlar = sp < 6 ? [t, t + 0.35, t + 0.7, t + 1.05, t + 1.4] : [t, t + 0.35, t + 0.7];   // yavaşken karşıya geçmek uzun sürer: daha ileriyi düşün
+      const tehlike = yakin.some(([px, pz]) => zamanlar.some(tt => {
         const hd = hareketliDurum(m, tt);
         if (m.tip === 'pervane') { const r = Math.hypot(px - m.cx, pz - m.cz); if (r > 3.8) return false; let fa = Math.atan2(pz - m.cz, px - m.cx) - hd.aci; fa = ((fa % PI) + PI) % PI; return Math.min(fa, PI - fa) < 0.75; }
         return Math.hypot(px - hd.x, pz - hd.z) < 2.5;
@@ -594,7 +688,9 @@ const Dunya = (() => {
     // önümde yol yoksa fren
     if (!atla && sp > 3) { const l = sp * 0.35; if (!zemin(d, a.x + a.vx / sp * l, a.z + a.vz / sp * l, a.y + 0.5, 0)) gaz = -0.7; }
     const ileriHiz = a.vx * Math.cos(a.a) + a.vz * Math.sin(a.a);
-    return { gaz, don: gaz < 0 && ileriHiz < 0.5 ? -don : don, turbo: a.nitro > 0 && Math.abs(fark) < 0.2 && sp > 10 && viraj < 0.3 && !atla && (a.nitroYaniyor || Math.random() < 0.05) };
+    let donC = gaz < 0 && ileriHiz < 0.5 ? -don : don;
+    if (a.tersT > 0 && a.tersT < 2.5) donC = -donC;   // ters direksiyon: ilk yarım saniye şaşırır, sonra alışır
+    return { gaz, don: donC, turbo: a.nitro > 0 && Math.abs(fark) < 0.2 && sp > 10 && viraj < 0.3 && !atla && (a.nitroYaniyor || Math.random() < 0.05) };
   }
 
   const api = { ORTAMLAR, YOLLAR, YOL_KARTLARI, TURLER, KATLAR, SILGI_R, BOMBA_R, ARABA_R, AZAMI_HIZ, GENIS, ZEMIN_Y, BAS_UZ, G,

@@ -389,7 +389,7 @@ const Sahne = (() => {
         break;
       }
       case 'yay': {
-        g.add(silindir(1.2, 1.3, 0.22, M(0x2a2a30, { m: 0.6, p: 0.3 }), 20)).position.y = 0.11;
+        { const sl = silindir(1.2, 1.3, 0.22, M(0x2a2a30, { m: 0.6, p: 0.3 }), 20); sl.position.y = 0.11; g.add(sl); }
         const pts = []; for (let i = 0; i <= 80; i++) { const a = i / 80 * Math.PI * 10; pts.push(new THREE.Vector3(Math.cos(a) * 0.8, 0.22 + i / 80 * 0.8, Math.sin(a) * 0.8)); }
         const yay = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.1, 6), M(0xc8ccd8, { m: 0.9, p: 0.25 })); yay.castShadow = true; g.add(yay);
         const ust = silindir(1.15, 1.15, 0.16, H || new THREE.MeshStandardMaterial({ map: DOKU.uyari }), 20); ust.position.y = 1.1; g.add(ust);
@@ -401,6 +401,94 @@ const Sahne = (() => {
         const ok = new THREE.Mesh(new THREE.PlaneGeometry(4, 3), H || new THREE.MeshStandardMaterial({ map: t, emissive: 0xff5a1a, emissiveMap: t, emissiveIntensity: 0.9 }));
         ok.rotation.set(-Math.PI / 2, 0, Math.PI / 2); ok.position.y = 0.04; g.add(ok);
         if (!H) anim = tt => { t.offset.y = -tt * 2; };
+        break;
+      }
+      case 'pres': {
+        const celik = M(0x9aa0b0, { m: 0.7, p: 0.4 });
+        [-3.9, 3.9].forEach(v => g.add(kutu(0.6, 5.6, 0.6, H || new THREE.MeshStandardMaterial({ map: DOKU.uyari, roughness: 0.6 }), 0, 2.8, v)));
+        g.add(kutu(1.2, 0.7, 8.6, celik, 0, 5.5, 0));
+        const kafa = new THREE.Group(); g.add(kafa);
+        kafa.add(kutu(3, 1.1, 7.2, M(0xe0702a, { m: 0.4, p: 0.45 }), 0, 0.55, 0));
+        if (!H) kafa.add(kutu(3.02, 0.25, 7.22, new THREE.MeshStandardMaterial({ map: DOKU.uyari }), 0, 0.12, 0, false));
+        const piston = silindir(0.35, 0.35, 4, M(0xc8ccd4, { m: 0.9, p: 0.2 }), 12); piston.position.y = 3.1; kafa.add(piston);
+        if (!H) [-1, 1].forEach(s => g.add(kutu(3.2, 0.03, 0.18, mat(0xffd020, { e: 0x806000, ei: 0.4 }), 0, 0.02, s * 3.6, false)));
+        const m = S.hareketli[0];
+        anim = tt => { kafa.position.y = Dunya.hareketliDurum(m, tt).h; };
+        kafa.position.y = 3.2;
+        break;
+      }
+      case 'ruzgar': {
+        // yolun solunda (-v) dev pervane, sağa (+v) doğru üfler
+        const gov = new THREE.Group(); gov.position.set(0, 0, -4.4); g.add(gov);
+        gov.add(kutu(1.4, 0.4, 1.4, M(0x4a4a52, { m: 0.6 }), 0, 0.2, 0));
+        const ayak = silindir(0.18, 0.22, 1.6, M(0x8a8a92, { m: 0.8 }), 8); ayak.position.y = 1.0; gov.add(ayak);
+        const kafes = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.1, 8, 28), M(0xd0d4dc, { m: 0.9, p: 0.25 })); kafes.position.y = 2.2; gov.add(kafes);
+        const kanat = new THREE.Group(); kanat.position.y = 2.2; gov.add(kanat);
+        for (let i = 0; i < 3; i++) { const k = kutu(0.4, 1.1, 0.06, M(0x3aa0e8, { p: 0.4 }), 0, 0.55, 0); const pv = new THREE.Group(); pv.rotation.z = i * 2.094; pv.add(k); kanat.add(pv); }
+        kanat.add(new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), M(0xe8e8e8, { m: 0.5 })));
+        if (!H) {   // yerde rüzgâr çizgileri
+          const ciz = new THREE.Group(); g.add(ciz);
+          for (let i = 0; i < 5; i++) { const c = kutu(0.12, 0.02, 1.6, mat(0xffffff, { sf: 0.55 }), rnd(-2, 2), 0.05, 0, false); c.userData.f = Math.random(); ciz.add(c); }
+          anim = tt => { kanat.rotation.z = tt * 14; ciz.children.forEach(c => { const f = (tt * 0.9 + c.userData.f) % 1; c.position.z = -3.4 + f * 6.8; c.material.opacity = Math.sin(f * Math.PI) * 0.6; }); };
+        } else anim = tt => { kanat.rotation.z = tt * 14; };
+        break;
+      }
+      case 'buz': {
+        const sekil = new THREE.Shape(); const n = 18;
+        for (let i = 0; i <= n; i++) { const a = i / n * 6.283, r = 3.2 * (0.88 + 0.12 * Math.sin(a * 4 + Dunya.karma(p.id || 'b') * 6)); if (i) sekil.lineTo(Math.cos(a) * r, Math.sin(a) * r); else sekil.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+        const buz = new THREE.Mesh(new THREE.ShapeGeometry(sekil), H || mat(0xb8e8ff, { p: 0.05, m: 0.3, sf: 0.85, e: 0x2a6a9a, ei: 0.25 }));
+        buz.rotation.x = -Math.PI / 2; buz.position.y = 0.05; buz.receiveShadow = true; g.add(buz);
+        if (!H) for (let i = 0; i < 6; i++) { const k = new THREE.Mesh(new THREE.OctahedronGeometry(rnd(0.2, 0.45)), mat(0xe0f6ff, { p: 0.1, m: 0.2, sf: 0.8 })); k.position.set(rnd(-2.2, 2.2), 0.15, rnd(-2.2, 2.2)); k.rotation.set(rnd(0, 3), rnd(0, 3), 0); g.add(k); }
+        break;
+      }
+      case 'civi': {
+        g.add(kutu(1.0, 0.06, 5.2, M(0x3a3a40, { m: 0.6 }), 0, 0.03, 0));
+        const civiM = M(0xd8dce4, { m: 0.95, p: 0.2 });
+        for (let v = -2.4; v <= 2.4; v += 0.4) for (const u of [-0.25, 0.25]) { const c = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.32, 6), civiM); c.position.set(u, 0.22, v + (u > 0 ? 0.2 : 0)); g.add(c); }
+        if (!H) [-1, 1].forEach(s => g.add(kutu(0.25, 0.08, 0.25, mat(0xff3020, { e: 0xff2000, ei: 0.7 }), 0, 0.08, s * 2.7, false)));
+        break;
+      }
+      case 'kapan': {
+        { const sl = silindir(0.75, 0.8, 0.12, M(0x5a4a3a, { m: 0.5, p: 0.6 }), 16); sl.position.y = 0.06; g.add(sl); }
+        const disM = M(0x9aa0a8, { m: 0.9, p: 0.3 });
+        const ceneler = [-1, 1].map(s => {
+          const piv = new THREE.Group(); piv.position.set(0, 0.12, s * 0.05); g.add(piv);
+          const cene = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.05, 6, 16, Math.PI), disM); cene.rotation.y = s > 0 ? 0 : Math.PI; piv.add(cene);
+          for (let i = 1; i < 8; i++) { const a = i / 8 * Math.PI, d = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), disM); d.position.set(Math.cos(a) * 0.62, Math.sin(a) * 0.62 - 0.0, 0); d.rotation.z = a - Math.PI / 2; cene.add(d); }
+          return { piv, s };
+        });
+        const ac = acik => ceneler.forEach(c => { c.piv.rotation.x = acik ? c.s * 1.45 : c.s * 0.05; });
+        ac(true);
+        g.userData.kapan = ac;
+        break;
+      }
+      case 'ters': {
+        { const sl = silindir(1.3, 1.35, 0.1, M(0x2a1040, { m: 0.4, p: 0.4 }), 24); sl.position.y = 0.05; g.add(sl); }
+        const t = DOKU.ok.clone(); t.needsUpdate = true;
+        const okM = H || new THREE.MeshStandardMaterial({ map: t, transparent: true, emissive: 0xd040ff, emissiveMap: t, emissiveIntensity: 1.1 });
+        const oklar = new THREE.Group(); oklar.position.y = 0.12; g.add(oklar);
+        [0, Math.PI].forEach(r => { const o = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1), okM); o.rotation.set(-Math.PI / 2, 0, r + Math.PI / 2); o.position.x = r ? -0.55 : 0.55; oklar.add(o); });
+        anim = tt => { oklar.rotation.y = tt * 2.5; };
+        break;
+      }
+      case 'ufo': {
+        const ufo = new THREE.Group(); ufo.position.y = 5.5; g.add(ufo);
+        const govde = new THREE.Mesh(new THREE.SphereGeometry(1.6, 24, 12), M(0xa8b0c0, { m: 0.85, p: 0.25 })); govde.scale.y = 0.3; ufo.add(govde);
+        const kubbe = new THREE.Mesh(new THREE.SphereGeometry(0.7, 18, 10, 0, 6.283, 0, Math.PI / 2), H || mat(0x6affc8, { sf: 0.6, e: 0x2a8a6a, ei: 0.6 })); kubbe.position.y = 0.3; ufo.add(kubbe);
+        const isiklar = [];
+        for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283, l = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), new THREE.MeshBasicMaterial({ color: 0xffe040 })); l.position.set(Math.cos(a) * 1.45, -0.05, Math.sin(a) * 1.45); ufo.add(l); isiklar.push(l); }
+        if (!H) { const isin = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.4, 5.4, 20, 1, true), new THREE.MeshBasicMaterial({ color: 0x6affc8, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide })); isin.position.y = 2.7; g.add(isin); }
+        { const sl = silindir(1.4, 1.4, 0.04, H || mat(0x6affc8, { sf: 0.5, e: 0x2a8a6a, ei: 0.8 }), 24); sl.position.y = 0.03; g.add(sl); }
+        anim = tt => { ufo.rotation.y = tt * 1.5; ufo.position.y = 5.5 + Math.sin(tt * 2) * 0.25; isiklar.forEach((l, i) => { l.visible = Math.sin(tt * 8 + i) > 0; }); };
+        break;
+      }
+      case 'rampa': {
+        const geo = new THREE.BufferGeometry();
+        const hu = 1.7, hv = 1.6, h = 0.8;
+        const v = [-hu, 0, -hv, hu, h, -hv, hu, h, hv, -hu, 0, hv, hu, 0, -hv, hu, 0, hv];
+        const idx = [0, 2, 1, 0, 3, 2, 1, 2, 5, 1, 5, 4, 0, 1, 4, 3, 5, 2];
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); geo.setIndex(idx); geo.computeVertexNormals();
+        const r = new THREE.Mesh(geo, H || new THREE.MeshStandardMaterial({ map: DOKU.uyari, roughness: 0.6, side: THREE.DoubleSide })); r.castShadow = true; r.receiveShadow = true; g.add(r);
         break;
       }
     }
@@ -419,11 +507,11 @@ const Sahne = (() => {
   function parcaSil(id, efekt = true) {
     const o = parcaG.get(id); if (!o) return;
     parcaG.delete(id);
-    if (efekt) { const g = o.g; poof(o.p.x, (o.p.y || 0) + 0.5, o.p.z); animasyonlar.push({ son: zaman + 0.35, f: k => { g.scale.setScalar(1 - k); }, bitis: () => scene.remove(g) }); }
-    else scene.remove(o.g);
+    if (efekt) { const g = o.g; poof(o.p.x, (o.p.y || 0) + 0.5, o.p.z); animasyonlar.push({ son: zaman + 0.35, f: k => { g.scale.setScalar(1 - k); }, bitis: () => { scene.remove(g); temizle(g); } }); }
+    else { scene.remove(o.g); temizle(o.g); }
   }
   function parcalariTemizle() { [...parcaG.keys()].forEach(id => parcaSil(id, false)); }
-  function mayinDurum(id, kapali) { const o = parcaG.get(id); if (o?.g.userData.mayin) o.g.visible = !kapali; }
+  function mayinDurum(id, kapali) { const o = parcaG.get(id); if (o?.g.userData.mayin) o.g.visible = !kapali; if (o?.g.userData.kapan) o.g.userData.kapan(!kapali); }
   function yayBas(x, z) {
     let en = null, ed = 3;
     parcaG.forEach(o => { if (o.g.userData.yay) { const d = Math.hypot(o.p.x - x, o.p.z - z); if (d < ed) { ed = d; en = o; } } });
@@ -434,10 +522,10 @@ const Sahne = (() => {
 
   // ---------- Hayalet ve imleçler ----------
   function hayaletAyarla(tur, x, y, z, r, gecerli) {
-    if (!tur) { if (hayalet) { scene.remove(hayalet.g); hayalet = null; hayaletTur = null; } return; }
+    if (!tur) { if (hayalet) { scene.remove(hayalet.g); temizle(hayalet.g); hayalet = null; hayaletTur = null; } return; }
     const k = tur + (gecerli ? 'e' : 'h');
     if (!hayalet || hayaletTur !== k) {
-      if (hayalet) scene.remove(hayalet.g);
+      if (hayalet) { scene.remove(hayalet.g); temizle(hayalet.g); }
       const r0 = gecerli ? 0x5aff7a : 0xff4a4a;
       if (tur === 'silgi' || tur === 'bomba') {
         const g = new THREE.Group(), R = tur === 'silgi' ? Dunya.SILGI_R : Dunya.BOMBA_R;
@@ -519,6 +607,14 @@ const Sahne = (() => {
     A.donus += (s.hiz || 0) * dt / 0.36;
     A.tekerler.forEach(t => { t.rotation.z = -A.donus; });
     A.onTeker.forEach(t => { t.rotation.y = -(s.direksiyon || 0) * 0.45; });
+    if (!!s.hayalet !== !!A.hayaletMi) {   // hayalet araba yarı saydam
+      A.hayaletMi = !!s.hayalet;
+      A.govde.traverse(o => {
+        if (!o.isMesh || o === A.kalkan || o === A.alev) return;
+        if (A.hayaletMi) { o.userData.asilMat = o.userData.asilMat || o.material; o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.35; o.material.depthWrite = false; }
+        else if (o.userData.asilMat) { o.material.dispose(); o.material = o.userData.asilMat; }
+      });
+    }
     A.kalkan.visible = !!s.kalkan; if (s.kalkan) A.kalkan.material.opacity = 0.18 + Math.sin(zaman * 6) * 0.06;
     A.alev.visible = !!s.turbo; if (s.turbo) { A.alev.scale.set(1, 0.8 + Math.random() * 0.6, 1); alevEfekt(s); }
     const zm = sonDunya ? Dunya.zemin(sonDunya, s.x, s.z, s.y + 0.5) : null;
@@ -532,7 +628,16 @@ const Sahne = (() => {
       else if (Math.random() < 0.2) parcacik(0, { x: gx, y: s.y + 0.1, z: gz, vx: rnd(-0.3, 0.3), vy: rnd(0.2, 0.6), vz: rnd(-0.3, 0.3), renk: 0xb8b4ac, boy: 0.5, omur: 0.4, buyu: 1.2 });
     }
   }
-  function arabaSil(A) { scene.remove(A.g); scene.remove(A.golge); }
+  // Bir nesnenin geometri/malzemelerini GPU'dan sil (mat() önbelleğindeki ortak malzemelere ve dokulara dokunma)
+  function temizle(o) {
+    const ortak = new Set(matOnbellek.values());
+    o.traverse(c => {
+      if (c.geometry) c.geometry.dispose();
+      const ms = c.material ? (Array.isArray(c.material) ? c.material : [c.material]) : [];
+      ms.forEach(m => { if (ortak.has(m)) return; if (m.map && c.isSprite) m.map.dispose(); m.dispose(); });
+    });
+  }
+  function arabaSil(A) { scene.remove(A.g); scene.remove(A.golge); temizle(A.g); temizle(A.golge); }
   function alevEfekt(s) {
     const gx = s.x - Math.cos(s.a) * 1.8, gz = s.z - Math.sin(s.a) * 1.8;
     parcacik(1, { x: gx, y: s.y + 0.5, z: gz, vx: -Math.cos(s.a) * 4 + rnd(-1, 1), vy: rnd(0, 1), vz: -Math.sin(s.a) * 4 + rnd(-1, 1), renk: Math.random() < 0.5 ? 0x4a9aff : 0xffd04a, boy: rnd(0.5, 0.9), omur: 0.25, buyu: -1 });
@@ -704,6 +809,20 @@ const Sahne = (() => {
       const bas = silindir(0.25, 0.4, 0.5, mat(0xc8ccd4, { m: 0.9, p: 0.2 }), 14); bas.position.set(0.62, 2.35, 0); bas.rotation.z = -0.5; g.add(bas);
       const alev = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.8, 14), new THREE.MeshBasicMaterial({ color: 0x5ab0ff })); alev.position.set(-0.8, 0.0, 0); alev.rotation.z = -0.5 + Math.PI; g.add(alev);
       const alev2 = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.2, 12), new THREE.MeshBasicMaterial({ color: 0xffe06a })); alev2.position.set(-0.7, 0.2, 0.1); alev2.rotation.z = -0.5 + Math.PI; g.add(alev2);
+    } else if (tur === 'roket') {
+      const govde = silindir(0.55, 0.55, 2.4, mat(0xe8eef8, { m: 0.5, p: 0.3 }), 18); govde.position.y = 1.6; g.add(govde);
+      const burun = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1, 18), mat(0xe8413a, { p: 0.4 })); burun.position.y = 3.3; g.add(burun);
+      for (let i = 0; i < 3; i++) { const k = kutu(0.08, 0.8, 0.7, mat(0xe8413a, { p: 0.4 }), 0, 0.7, 0); const pv = new THREE.Group(); pv.rotation.y = i * 2.094; k.position.z = 0.75; pv.add(k); g.add(pv); }
+      const pen = new THREE.Mesh(new THREE.CircleGeometry(0.22, 14), mat(0x3a8ae8, { e: 0x1a4a9a, ei: 0.5 })); pen.position.set(0, 2, 0.56); g.add(pen);
+      const alev = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.4, 14), new THREE.MeshBasicMaterial({ color: 0xffa040 })); alev.rotation.x = Math.PI; alev.position.y = -0.2; g.add(alev);
+      g.rotation.z = -0.35;
+    } else if (tur === 'hayalet') {
+      const hm = mat(0xf4f6ff, { sf: 0.8, e: 0x8a9ad8, ei: 0.3 });
+      const bas = new THREE.Mesh(new THREE.SphereGeometry(1.1, 22, 16, 0, 6.283, 0, Math.PI / 2), hm); bas.position.y = 2.2; g.add(bas);
+      const etek = silindir(1.1, 1.25, 1.6, hm, 22); etek.position.y = 1.4; g.add(etek);
+      for (let i = 0; i < 6; i++) { const a = i / 6 * 6.283, c = new THREE.Mesh(new THREE.ConeGeometry(0.32, 0.5, 8), hm); c.rotation.x = Math.PI; c.position.set(Math.cos(a) * 0.95, 0.4, Math.sin(a) * 0.95); g.add(c); }
+      [-0.38, 0.38].forEach(x => { const goz = new THREE.Mesh(new THREE.SphereGeometry(0.17, 10, 8), mat(0x1a1a2a)); goz.position.set(x, 2.4, 0.98); g.add(goz); });
+      const agiz = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), mat(0x1a1a2a)); agiz.scale.set(1, 1.3, 0.5); agiz.position.set(0, 1.95, 1.05); g.add(agiz);
     } else if (tur === 'silgi') {
       const m = mat(0xc8ccd4, { m: 0.9, p: 0.25 });
       const sap = kutu(0.45, 3, 0.25, m, 0, 1.5, 0); sap.rotation.z = 0.6; g.add(sap);
@@ -748,7 +867,7 @@ const Sahne = (() => {
         const o = parcaYap({ tur, x: 0, y: 0, z: 0, r: 0, id: 'kart' + tur });
         if (o.anim) o.anim(0.7);
         g.add(o.g);
-        const zemin = kutu(tur === 'cekic' ? 9 : 7, 0.3, 7, yolMalzeme().asfalt, 0, -0.16, 0, false); g.add(zemin);
+        const zemin = kutu(tur === 'cekic' || tur === 'pres' ? 9.5 : 7, 0.3, 7, yolMalzeme().asfalt, 0, -0.16, 0, false); g.add(zemin);
       }
       g.rotation.y = 0.5;
     }
@@ -788,7 +907,7 @@ const Sahne = (() => {
   }
 
   return {
-    RENKLER, RENK_AD, kur, ortamKur, yolGuncelle, yolKutusu, parcaEkle, parcaSil, parcalariTemizle, mayinDurum, yayBas, hayaletAyarla, vurgula, imlecAyarla, imlecleriTemizle,
+    RENKLER, RENK_AD, temizle, kur, ortamKur, yolGuncelle, yolKutusu, parcaEkle, parcaSil, parcalariTemizle, mayinDurum, yayBas, hayaletAyarla, vurgula, imlecAyarla, imlecleriTemizle,
     arabaYap, arabaGuncelle, arabaSil, etiketYap, dunyaAyarla, toz, kivilcim, poof, patlama, konfeti, halkaEfekt, sarsinti, parcacik,
     kartResmi, yolHayalet, kameraDondur, kameraGenel, kameraPistiGoster, kameraKaydir, kameraYakinlas, kameraTakip, ekrandanYola, ekranKaydirma, ciz,
     get scene() { return scene; }, get camera() { return camera; },

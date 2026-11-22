@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 14;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 15;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -187,7 +187,7 @@ const Oyun = (() => {
 
   // ---------- Oyun kurulumu ----------
   function oyunTemizle() {
-    if (O) { O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); }); }
+    if (O) { O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); Sahne.temizle(c.et); }); }
     Sahne.parcalariTemizle(); Sahne.imlecleriTemizle(); Sahne.hayaletAyarla(null);
     Ses.motorDurdur();
     O = null;
@@ -287,7 +287,7 @@ const Oyun = (() => {
       case 'koymadi': akis(`⌛ ${ad(m.no)} parçasını koyamadı`); Sahne.imlecAyarla(m.no, null); break;
       case 'durum': durumGeldi(m); break;
       case 'patla':
-        if (m.no !== O.benNo) { Sahne.patlama(m.x, m.y || 0, m.z); Ses.patla(); }
+        if (m.no !== O.benNo) { if (m.kapan) { Ses.vurdu(); Sahne.kivilcim(m.x, (m.y || 0) + 0.4, m.z, 10); } else { Sahne.patlama(m.x, m.y || 0, m.z); Ses.patla(); } }
         O.d.mayinKapali.set(m.pid, (O.yarisT ?? 0) + 4);
         break;
       case 'bitirdi': {
@@ -300,7 +300,7 @@ const Oyun = (() => {
         puanCiz();
         break;
       }
-      case 'cikti': O.cikti.add(m.no); akis(`🚪 ${ad(m.no)} oyundan çıktı`, 'kotu'); const c = O.arabalar.get(m.no); if (c) { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); O.arabalar.delete(m.no); } puanCiz(); break;
+      case 'cikti': O.cikti.add(m.no); akis(`🚪 ${ad(m.no)} oyundan çıktı`, 'kotu'); const c = O.arabalar.get(m.no); if (c) { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); Sahne.temizle(c.et); O.arabalar.delete(m.no); } puanCiz(); break;
       case 'son': oyunSonu(m); break;
     }
   }
@@ -318,7 +318,7 @@ const Oyun = (() => {
     if (m.faz === 'secim') {
       if (m.tur !== O.tur) {   // yeni tur: arabaları kaldır
         O.tur = m.tur; O.el = {}; O.yolEl = {}; O.koydu = {};
-        O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); }); O.arabalar.clear();
+        O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); Sahne.temizle(c.et); }); O.arabalar.clear();
         O.ben = null; Ses.motorDurdur();
         Sahne.kameraPistiGoster(O.d);
         Sahne.imlecleriTemizle();
@@ -491,7 +491,7 @@ const Oyun = (() => {
       // tuzak yolun yönüne göre döner, R ile çevrilir
       const i = Dunya.ilerlemeBul(O.d, Y.x, Y.y, Y.z);
       const yolA = i >= 0 ? O.d.cizgi[i].a : 0;
-      Y.r = ceyrek(yolA + ((tur === 'duvar' || tur === 'blok') ? Math.PI / 2 : 0) + Y.donus);
+      Y.r = ceyrek(yolA + ((tur === 'duvar' || tur === 'blok') ? Math.PI / 2 : 0) + (tur === 'rampa' ? 0 : Y.donus));   // rampa hep ileri baksın
       Y.hata = !Y.yolda && tur !== 'bomba' && tur !== 'silgi' ? 'Yolun üstüne getir' : Dunya.yerlestirmeHatasi(O.d, tur, Y.x, Y.y, Y.z, Y.r);
       Y.hedefler = tur === 'silgi' ? [Dunya.silgiHedefi(O.d, Y.x, Y.y, Y.z)].filter(Boolean).map(p => p.id) : tur === 'bomba' ? Dunya.bombaHedefleri(O.d, Y.x, Y.y, Y.z).map(p => p.id) : [];
       Y.imlecBekliyor = true;
@@ -591,7 +591,7 @@ const Oyun = (() => {
 
   function yarisBasla(m) {
     O.yarisT = -m.geriSayim; O.yarisSon = m.kalan; O.bitenler = []; O.sonGeriSayi = null; O.sonGonder = 0; O.siraT = 0; O.kurtarT = 0;
-    O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); }); O.arabalar.clear();
+    O.arabalar.forEach(c => { Sahne.arabaSil(c.A); Sahne.scene.remove(c.et); Sahne.temizle(c.et); }); O.arabalar.clear();
     dunyaYenile(); O.d.mayinKapali = new Map();
     O.ben = null;
     O.oyuncular.forEach(p => {
@@ -604,7 +604,9 @@ const Oyun = (() => {
       if (p.no === O.benNo) {
         O.ben = Dunya.yeniAraba(y.x, y.y || 0, y.z, y.a); if (otopilot) otopilot = {};
         const g = m.guc?.[p.no] || {};
-        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = O.ben.nitroAzami = 2 + (g.nitro || 0) * 4.5;
+        O.ben.kalkan = g.kalkan || 0; O.ben.nitro = O.ben.nitroAzami = 2 + (g.nitro || 0) * 4.5; O.ben.roket = g.roket ? 1 : 0; O.ben.hayalet = g.hayalet ? 1 : 0;
+        if (g.roket) akis('🚀 Roket kalkış hazır: BAŞLA deyince fırlayacaksın!', 'iyi');
+        if (g.hayalet) akis('👻 Bu yarışta hayaletsin: arabalar içinden geçer.', 'iyi');
       }
     });
     if (O.ben) Sahne.kameraTakip(O.ben, true);
@@ -621,6 +623,7 @@ const Oyun = (() => {
   }
   function durumGeldi(m) {
     const simdi = performance.now();
+    if (Number.isFinite(m.t) && O.yarisT != null && Math.abs(m.t - O.yarisT) > 0.3) O.yarisT += (m.t - O.yarisT) * 0.5;   // yavaş bilgisayarda saat geri kalmasın
     m.l.forEach(([no, x, y, z, a, spin, b, hiz, ci]) => {
       if (no === O.benNo) return;
       const c = O.arabalar.get(no); if (!c) return;
@@ -639,6 +642,13 @@ const Oyun = (() => {
         case 'nitro': Ses.nitro(); Sahne.halkaEfekt(a.x, a.y + 0.4, a.z, 0x4a9aff, 3); break;
         case 'carpti': Ses.carp(o.guc); Sahne.kivilcim(o.x, (o.y ?? a.y) + 0.5, o.z, Math.min(24, 4 + o.guc * 1.5)); if (o.guc > 8) Sahne.sarsinti(0.25); break;
         case 'vurdu': Ses.vurdu(); Sahne.kivilcim(a.x, a.y + 0.6, a.z, 20); Sahne.sarsinti(0.5); break;
+        case 'kapan': Ses.vurdu(); Sahne.kivilcim(a.x, a.y + 0.4, a.z, 14); Sahne.sarsinti(0.4); eve({ tip: 'mayin', pid: o.pid, x: o.x, y: o.y, z: o.z, kapan: true }); if (o.yakalandi) akis('🪤 Ayı kapanına yakalandın!', 'kotu'); break;
+        case 'patlak': Ses.carp(9); Sahne.toz(a.x, a.y + 0.2, a.z, 14, 0x9a9aa0, 2); akis('📍 Lastiğin patladı! 4 saniye yavaşsın.', 'kotu'); break;
+        case 'ters': Ses.portal(); Sahne.halkaEfekt(a.x, a.y + 0.4, a.z, 0xd040ff, 3); akis('🔀 Direksiyon ters döndü!', 'kotu'); break;
+        case 'ufo': Ses.portal(); Sahne.halkaEfekt(o.x0, o.y0 + 0.5, o.z0, 0x6affc8, 4); Sahne.halkaEfekt(a.x, a.y, a.z, 0x6affc8, 4); Sahne.kameraTakip(a, true); akis('🛸 UFO seni geri götürdü!', 'kotu'); break;
+        case 'ezildi': Ses.vurdu(); Ses.carp(14); Sahne.kivilcim(a.x, a.y + 0.6, a.z, 24); Sahne.sarsinti(0.6); break;
+        case 'ruzgar': Ses.turbo(); break;
+        case 'roket': Ses.nitro(); Sahne.halkaEfekt(a.x, a.y + 0.4, a.z, 0xff8a3a, 4); break;
         case 'kalkan': Ses.kalkan(); Sahne.halkaEfekt(a.x, a.y + 0.6, a.z, 0x6ad8ff, 4); akis('🛡️ Kalkan seni korudu!', 'iyi'); break;
         case 'indi': Ses.indi(o.guc); if (o.guc > 4) Sahne.toz(a.x, a.y + 0.1, a.z, Math.min(16, o.guc * 1.5)); break;
         case 'dustu': Ses.dus(); break;
@@ -674,12 +684,12 @@ const Oyun = (() => {
       const n = Math.max(1, Math.ceil(dt / (1 / 120))), h = dt / n;
       for (let i = 0; i < n; i++) {
         const ol = Dunya.adim(a, g, O.d, t - dt + h * (i + 1), h, []);
-        O.arabalar.forEach((c, no) => { if (no === O.benNo) return; const s = c.s; Dunya.arabaCarp(a, { x: s.x, y: s.y, z: s.z, vx: Math.cos(s.a) * (s.hiz || 0), vz: Math.sin(s.a) * (s.hiz || 0), bitti: !!(c.hedef.b & 4), dus: c.hedef.b & 2 ? 1 : 0 }, ol); });
+        O.arabalar.forEach((c, no) => { if (no === O.benNo) return; const s = c.s; Dunya.arabaCarp(a, { x: s.x, y: s.y, z: s.z, vx: Math.cos(s.a) * (s.hiz || 0), vz: Math.sin(s.a) * (s.hiz || 0), bitti: !!(c.hedef.b & 4), dus: c.hedef.b & 2 ? 1 : 0, hayalet: c.hedef.b & 128 ? 1 : 0 }, ol); });
         if (ol.length) olayIsle(ol, a);
       }
       if (t - O.sonGonder > 1 / 15) {
         O.sonGonder = t;
-        const b = (a.havada ? 1 : 0) | (a.dus ? 2 : 0) | (a.bitti ? 4 : 0) | (a.turboT > 0 ? 8 : 0) | (a.kayiyor > 0.3 ? 16 : 0) | (a.kalkan > 0 ? 32 : 0) | (a.yerde === 'bal' ? 64 : 0);
+        const b = (a.havada ? 1 : 0) | (a.dus ? 2 : 0) | (a.bitti ? 4 : 0) | (a.turboT > 0 ? 8 : 0) | (a.kayiyor > 0.3 ? 16 : 0) | (a.kalkan > 0 ? 32 : 0) | (a.yerde === 'bal' ? 64 : 0) | (a.hayalet ? 128 : 0);
         eve({ tip: 'ben', d: [+a.x.toFixed(2), +a.y.toFixed(2), +a.z.toFixed(2), +a.a.toFixed(3), +a.spin.toFixed(2), b, +a.vx.toFixed(1), +a.vz.toFixed(1), a.ci] });
       }
       const hiz = Math.hypot(a.vx, a.vz);
@@ -691,7 +701,7 @@ const Oyun = (() => {
     O.arabalar.forEach((c, no) => {
       if (no === O.benNo && a) {
         const hiz = Math.hypot(a.vx, a.vz);
-        c.s = { x: a.x, y: a.y, z: a.z, a: a.a, spin: a.spin, hiz, havada: a.havada, vy: a.vy, dus: a.dus, turbo: a.turboT > 0, kayiyor: a.kayiyor > 0.3, kalkan: a.kalkan > 0, bal: a.yerde === 'bal', direksiyon: g.don || 0 };
+        c.s = { x: a.x, y: a.y, z: a.z, a: a.a, spin: a.spin, hiz, havada: a.havada, vy: a.vy, dus: a.dus, turbo: a.turboT > 0, kayiyor: a.kayiyor > 0.3, kalkan: a.kalkan > 0, bal: a.yerde === 'bal', hayalet: !!a.hayalet, direksiyon: g.don || 0 };
         c.ci = a.ci;
       } else {
         const H = c.hedef, s = c.s, b = H.b || 0;
@@ -701,13 +711,13 @@ const Oyun = (() => {
         s.x += (tx - s.x) * k; s.y += (H.y - s.y) * k; s.z += (tz - s.z) * k;
         s.a += Dunya.aciFark(s.a, H.a) * k; s.spin = H.spin; s.hiz = H.hiz;
         s.vx = Math.cos(s.a) * (s.hiz || 0); s.vz = Math.sin(s.a) * (s.hiz || 0);
-        Object.assign(s, { havada: !!(b & 1), dus: b & 2, turbo: !!(b & 8), kayiyor: !!(b & 16), kalkan: !!(b & 32), bal: !!(b & 64) });
+        Object.assign(s, { havada: !!(b & 1), dus: b & 2, turbo: !!(b & 8), kayiyor: !!(b & 16), kalkan: !!(b & 32), bal: !!(b & 64), hayalet: !!(b & 128) });
       }
       Sahne.arabaGuncelle(c.A, c.s, dt);
       c.et.position.set(c.s.x, c.s.y + 1.9, c.s.z);
       c.et.visible = no !== O.benNo && !(c.hedef.b & 4);
     });
-    O.parcalar.forEach(p => { if (p.tur === 'mayin') Sahne.mayinDurum(p.id, (O.d.mayinKapali.get(p.id) ?? -1) > t); });
+    O.parcalar.forEach(p => { if (p.tur === 'mayin' || p.tur === 'kapan') Sahne.mayinDurum(p.id, (O.d.mayinKapali.get(p.id) ?? -1) > t); });
     if (!O.izle && t >= 0 && (!a || (O.bitirmeT != null && t - O.bitirmeT > 2.2))) izlemeyeBasla();
     O.siraT -= dt;
     if (O.siraT <= 0) { O.siraT = 0.25; siraCiz(); }
@@ -730,7 +740,7 @@ const Oyun = (() => {
     const benSira = liste.findIndex(x => x.no === O.benNo) + 1;
     $('siraYazi').innerHTML = `${benSira}.<small>/${liste.length}</small>`;
     const a = O.ben;
-    $('gucYazi').textContent = a.kalkan ? '🛡️ Kalkan' : '';
+    $('gucYazi').textContent = [a.kalkan ? '🛡️ Kalkan' : '', a.hayalet ? '👻 Hayalet' : '', a.patlakT > 0 ? '📍 Patlak' : '', a.tersT > 0 ? '🔀 Ters' : ''].filter(Boolean).join(' · ');
     const yuzde = Math.min(100, Math.round(a.enIleri / Math.max(1, O.d.bitisI) * 100));
     $('hizYazi').textContent = a.bitti ? '🏁 Bitirdin!' : `${Math.round(Math.hypot(a.vx, a.vz) * 9)} km/s · %${yuzde}`;
   }
