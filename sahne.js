@@ -758,7 +758,7 @@ const Sahne = (() => {
     kutuB.getSize(boy); kutuB.getCenter(merkez);
     const r = Math.max(boy.x, boy.y, boy.z) * 0.62;
     const D = r / Math.tan(kartKam.fov * Math.PI / 360) * 1.05;
-    const tumsekli = tip === 'yol' && (Dunya.YOLLAR[tur].seg || []).some(s => s.dalga || s.kasis);
+    const tumsekli = tip === 'yol' && (Dunya.YOLLAR[tur].egik || (Dunya.YOLLAR[tur].seg || []).some(s => s.dalga || s.kasis));
     const yon = tip === 'yol' ? (tumsekli ? new THREE.Vector3(0.55, 0.38, 0.75).normalize() : new THREE.Vector3(0, 0.85, 0.53).normalize()) : new THREE.Vector3(0.15, 0.5, 0.85).normalize();
     kartKam.position.copy(merkez).addScaledVector(yon, D); kartKam.lookAt(merkez);
     kartR.render(kartSahne, kartKam);

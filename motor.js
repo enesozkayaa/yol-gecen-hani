@@ -46,7 +46,7 @@ const Motor = (() => {
       for (let i = 0; i < n; i++) {
         let t = agirlikliCek(havuz);
         if (D.YOLLAR[t].nadir && kartlar.includes(t)) t = 'duz';
-        if (D.YOLLAR[t].engebe && kartlar.some(k => D.YOLLAR[k].engebe)) t = Math.random() < 0.5 ? 'duz' : 'uzun';   // bir elde en fazla 1 engebeli yol
+        if (D.YOLLAR[t].engebe && kartlar.filter(k => D.YOLLAR[k].engebe).length >= 2) t = Math.random() < 0.5 ? 'tepe' : 'zikzak';   // bir elde en fazla 2 engebeli yol
         kartlar.push(t);
       }
       kartlar.forEach(t => { if (D.YOLLAR[t].nadir) M.nadirSayac[t] = (M.nadirSayac[t] || 0) + 1; });
