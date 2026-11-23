@@ -162,3 +162,8 @@ body.dokun .surus.gizli2 { display: none !important; }
   #akis { width: min(220px, 36vw); } #akis div { font-size: 11px; }
   .surus button { width: 62px; height: 62px; } .surus button.buyuk { width: 78px; height: 78px; }
 }
+
+/* Serbest bakışta telefondaki joystick (FiraRun'daki gibi) */
+#joystick { position: absolute; left: max(18px, env(safe-area-inset-left)); bottom: max(18px, env(safe-area-inset-bottom)); width: 120px; height: 120px; border-radius: 50%; background: #0006; box-shadow: inset 0 0 0 3px #fff5; pointer-events: auto; touch-action: none; align-items: center; justify-content: center; }
+#joyTop { width: 52px; height: 52px; border-radius: 50%; background: #ffe0a0cc; box-shadow: 0 2px 8px #0008; }
+body.dokun #joystick.gizli2 { display: none !important; }

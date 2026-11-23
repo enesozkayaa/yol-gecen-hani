@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 15;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 16;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -309,7 +309,7 @@ const Oyun = (() => {
     O.faz = m.faz;
     O.fazSon = performance.now() + m.kalan * 1000;
     $('kartPanel').classList.add('gizli'); $('yerlestirPanel').classList.add('gizli'); $('yarisBilgi').classList.add('gizli'); $('yolPanel').classList.add('gizli'); $('izlePanel').classList.add('gizli'); $('nitroGosterge').classList.add('gizli');
-    if (O) O.izle = null;
+    if (O) O.izle = null; $('joystick').classList.add('gizli2');
     Sahne.yolHayalet(null);
     $('turSonu').classList.add('gizli');
     surusGoster(false);
@@ -517,7 +517,7 @@ const Oyun = (() => {
   });
   kanvas.addEventListener('pointermove', e => {
     if (parmaklar.has(e.pointerId)) parmaklar.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (ikiParmak && parmaklar.size >= 2) {
+    if (ikiParmak && parmaklar.size >= 2 && !ucuyor()) {
       const [a, b] = [...parmaklar.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y);
       const k = Sahne.ekranKaydirma(mx - ikiParmak.mx, my - ikiParmak.my); Sahne.kameraKaydir(k.dx, k.dz);
       if (ikiParmak.d > 10 && d > 10) Sahne.kameraYakinlas(d / ikiParmak.d);
@@ -527,6 +527,7 @@ const Oyun = (() => {
     if (surukle) {
       const dx = e.clientX - surukle.x, dy = e.clientY - surukle.y;
       if (Math.hypot(e.clientX - surukle.sx, e.clientY - surukle.sy) > 7) surukle.kaydi = true;
+      if (ucuyor()) { bakisCevir(dx, dy, surukle.tip === 'touch' ? 1.5 : 1); surukle.x = e.clientX; surukle.y = e.clientY; return; }
       if (surukle.kaydi) {
         if (surukle.buton === 2) { const k = Sahne.ekranKaydirma(dx, dy); Sahne.kameraKaydir(k.dx, k.dz); }
         else Sahne.kameraDondur(dx, dy);
@@ -547,7 +548,41 @@ const Oyun = (() => {
   kanvas.addEventListener('pointerup', birak);
   kanvas.addEventListener('pointercancel', birak);
   kanvas.addEventListener('contextmenu', e => e.preventDefault());
-  kanvas.addEventListener('wheel', e => { if (kameraSerbest()) { e.preventDefault(); Sahne.kameraYakinlas(e.deltaY > 0 ? 0.88 : 1.14); } }, { passive: false });
+  kanvas.addEventListener('wheel', e => {
+    if (!kameraSerbest()) return;
+    e.preventDefault();
+    const I = O.izle;
+    if (ucuyor()) { const k = e.deltaY > 0 ? -1.5 : 1.5, cp = Math.cos(I.pitch); I.poz.x += Math.cos(I.yaw) * cp * k; I.poz.y -= Math.sin(I.pitch) * k; I.poz.z += Math.sin(I.yaw) * cp * k; return; }   // tekerlek: baktığın yöne git
+    Sahne.kameraYakinlas(e.deltaY > 0 ? 0.88 : 1.14);
+  }, { passive: false });
+  // ---------- Serbest bakış: FiraRun'daki uçan kamera ----------
+  const ucuyor = () => O?.faz === 'yaris' && O.izle?.mod === 'serbest' && !!O.izle.poz;
+  function bakisCevir(dx, dy, k = 1) { const I = O.izle; I.yaw += dx * 0.0042 * k; I.pitch = Math.max(-1.45, Math.min(1.45, I.pitch + dy * 0.0036 * k)); }
+  const joy = { x: 0, y: 0, id: null }, J = $('joystick'), JT = $('joyTop');
+  function joyAyarla(e) {
+    const r = J.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2;
+    let dx = (e.clientX - cx) / R, dy = (e.clientY - cy) / R; const l = Math.hypot(dx, dy); if (l > 1) { dx /= l; dy /= l; }
+    joy.x = dx; joy.y = dy; JT.style.transform = `translate(${dx * R * 0.6}px, ${dy * R * 0.6}px)`;
+  }
+  J.addEventListener('pointerdown', e => { e.preventDefault(); Ses.baslat(); joy.id = e.pointerId; try { J.setPointerCapture(e.pointerId); } catch (x) { } joyAyarla(e); });
+  J.addEventListener('pointermove', e => { if (joy.id === e.pointerId) joyAyarla(e); });
+  const joyBirak = e => { if (joy.id !== e.pointerId) return; joy.id = null; joy.x = joy.y = 0; JT.style.transform = ''; };
+  J.addEventListener('pointerup', joyBirak); J.addEventListener('pointercancel', joyBirak); J.addEventListener('lostpointercapture', joyBirak);
+  function ucanKare(dt) {
+    // W baktığın yöne (aşağı bakıyorsan aşağı) götürür, A/D yana, Boşluk yukarı, Shift aşağı
+    const I = O.izle, v = k => tus.has(k), hz = 22 * dt;
+    let ileri = (v('w') || v('arrowup') ? 1 : 0) - (v('s') || v('arrowdown') ? 1 : 0), yan = (v('d') || v('arrowright') ? 1 : 0) - (v('a') || v('arrowleft') ? 1 : 0);
+    if (joy.id !== null) { ileri = -joy.y; yan = joy.x; }
+    const yuk = (v(' ') ? 1 : 0) - (v('shift') ? 1 : 0);
+    const cp = Math.cos(I.pitch), fx = Math.cos(I.yaw) * cp, fy = -Math.sin(I.pitch), fz = Math.sin(I.yaw) * cp;
+    I.poz.x += (fx * ileri - Math.sin(I.yaw) * yan) * hz;
+    I.poz.y += (fy * ileri + yuk) * hz;
+    I.poz.z += (fz * ileri + Math.cos(I.yaw) * yan) * hz;
+    const B = Sahne.yolKutusu(O.d);
+    I.poz.x = Math.max(B.x0 - 60, Math.min(B.x1 + 60, I.poz.x)); I.poz.z = Math.max(B.z0 - 60, Math.min(B.z1 + 60, I.poz.z));
+    I.poz.y = Math.max(Dunya.ZEMIN_Y + 1, Math.min(B.y1 + 60, I.poz.y));
+    Sahne.kameraUcan(I.poz, I.yaw, I.pitch);
+  }
   $('donBtn').onclick = () => dondur(1);
   $('koyBtn').onclick = koyDene;
   $('yakinBtn').onclick = () => Sahne.kameraYakinlas(1.3);
@@ -615,7 +650,7 @@ const Oyun = (() => {
     $('yarisBilgi').classList.remove('gizli');
     $('nitroGosterge').classList.toggle('gizli', !O.ben);
     surusGoster(!!O.ben);
-    O.izle = null; $('izlePanel').classList.add('gizli');
+    O.izle = null; $('izlePanel').classList.add('gizli'); $('joystick').classList.add('gizli2');
     O.bitirmeT = null;
     $('ipucu').textContent = O.ben ? 'W/↑ gaz · S/↓ fren · A D / ← → direksiyon · Boşluk basılı tut: nitro · R kurtar' : '';
     $('ipucu').classList.add('surus');
@@ -751,7 +786,6 @@ const Oyun = (() => {
     O.izle = { mod: 'oyuncu', no: null };
     $('izlePanel').classList.remove('gizli'); $('nitroGosterge').classList.add('gizli');
     surusGoster(false);
-    $('ipucu').textContent = dokun ? '' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
     izleDegistir(0);
   }
   function izleAdaylari() { const l = (O.izleListe || [...O.arabalar.keys()]).filter(no => no !== O.benNo); const devam = l.filter(no => !O.bitenler.includes(no)); return devam.length ? devam : l; }
@@ -762,13 +796,19 @@ const Oyun = (() => {
     i = i < 0 ? 0 : (i + yon + l.length) % l.length;
     O.izle.no = l[i]; O.izle.mod = 'oyuncu';
     const c = O.arabalar.get(O.izle.no); if (c) Sahne.kameraTakip(c.s, true);
+    J.classList.add('gizli2');
     izlePanelCiz();
   }
   function izleSerbest(ac) {
     if (!O?.izle) return;
     O.izle.mod = ac ? 'serbest' : 'oyuncu';
-    if (ac) { const c = O.arabalar.get(O.izle.no) || (O.ben && O.arabalar.get(O.benNo)); const s = c ? c.s : O.d.cizgi[0]; Sahne.kameraGenel({ x: s.x, y: s.y, z: s.z }, 45); }
+    if (ac) {   // kamera nerede duruyorsa oradan, aynı yöne bakarak uçmaya başla
+      const p = Sahne.camera.position, d = new THREE.Vector3(); Sahne.camera.getWorldDirection(d);
+      O.izle.poz = { x: p.x, y: p.y, z: p.z }; O.izle.yaw = Math.atan2(d.z, d.x); O.izle.pitch = Math.max(-1.2, Math.min(1.2, -Math.asin(d.y)));
+      Sahne.kameraUcan(O.izle.poz, O.izle.yaw, O.izle.pitch);
+    }
     else izleDegistir(0);
+    J.classList.toggle('gizli2', !ac);
     izlePanelCiz();
   }
   function izleGuncelle() {
@@ -780,6 +820,7 @@ const Oyun = (() => {
     $('izleAd').textContent = serbest ? '🎥 Serbest bakış' : `👀 ${ad(O.izle.no)}`;
     $('izleSerbestBtn').textContent = serbest ? '👀 Oyuncuyu izle' : '🎥 Serbest bakış';
     $('izleOnceBtn').disabled = $('izleSonraBtn').disabled = false;
+    $('ipucu').textContent = dokun ? '' : serbest ? 'Fareyle sürükle: bak · W baktığın yöne git · A D yana · Boşluk yukarı · Shift aşağı · Tekerlek ileri/geri · F: oyuncuyu izle' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
   }
   $('izleOnceBtn').onclick = () => izleDegistir(-1);
   $('izleSonraBtn').onclick = () => izleDegistir(1);
@@ -828,7 +869,7 @@ const Oyun = (() => {
     if (O) {
       fareKare(dt);
       if (O.faz === 'yerlestir') yerlestirKare();
-      else if (O.faz === 'yaris') yarisKare(dt);
+      else if (O.faz === 'yaris') { yarisKare(dt); if (ucuyor()) ucanKare(dt); }
       if (O.faz === 'secim' || O.faz === 'yerlestir' || O.faz === 'yolKoy' || O.faz === 'puan') {
         const kalan = Math.max(0, (O.fazSon - performance.now()) / 1000);
         $('sayac').textContent = O.faz === 'puan' ? '' : Math.ceil(kalan);

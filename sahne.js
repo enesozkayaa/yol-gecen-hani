@@ -745,6 +745,8 @@ const Sahne = (() => {
   // Fareyle döndür: sağa sola 360°, yukarı aşağı eğim
   function kameraDondur(dx, dy) { kam.gYaw -= dx * 0.007; kam.gPitch = Math.max(0.2, Math.min(1.45, kam.gPitch + dy * 0.005)); }
   function kameraYakinlas(k) { kam.yakin = Math.max(0.25, Math.min(2.5, kam.yakin * k)); }
+  // uçan kamera (serbest bakış): poz'da durur, baktığı yöne (yaw, pitch) bakar
+  function kameraUcan(poz, yaw, pitch) { kam.mod = 'ucan'; kam.ucan = { poz, yaw, pitch }; }
   function kameraTakip(hedef, ani) { kam.mod = 'takip'; kam.hedef = hedef; if (ani) { kam.yaw = hedef.a; kam.ani = true; } }
   function kameraGuncelle(dt) {
     let hx, hy, hz, cx, cy, cz, hiz = 3;
@@ -760,6 +762,11 @@ const Sahne = (() => {
         kam.sonTakip = { cx, cy, cz };
       } else { const s = kam.sonTakip || { cx: kam.x, cy: kam.y, cz: kam.z }; cx = s.cx; cy = s.cy; cz = s.cz; hx = h.x; hy = h.y; hz = h.z; }
       hiz = 9;
+    } else if (kam.mod === 'ucan' && kam.ucan) {
+      const { poz, yaw, pitch } = kam.ucan, cp = Math.cos(pitch);
+      cx = poz.x; cy = poz.y; cz = poz.z;
+      hx = poz.x + Math.cos(yaw) * cp; hy = poz.y - Math.sin(pitch); hz = poz.z + Math.sin(yaw) * cp;
+      kam.ani = true;
     } else {
       const D = kam.uzak / kam.yakin;
       hx = kam.odak.x + kam.kayX; hy = kam.odak.y; hz = kam.odak.z + kam.kayZ;
@@ -909,7 +916,7 @@ const Sahne = (() => {
   return {
     RENKLER, RENK_AD, temizle, kur, ortamKur, yolGuncelle, yolKutusu, parcaEkle, parcaSil, parcalariTemizle, mayinDurum, yayBas, hayaletAyarla, vurgula, imlecAyarla, imlecleriTemizle,
     arabaYap, arabaGuncelle, arabaSil, etiketYap, dunyaAyarla, toz, kivilcim, poof, patlama, konfeti, halkaEfekt, sarsinti, parcacik,
-    kartResmi, yolHayalet, kameraDondur, kameraGenel, kameraPistiGoster, kameraKaydir, kameraYakinlas, kameraTakip, ekrandanYola, ekranKaydirma, ciz,
+    kartResmi, yolHayalet, kameraDondur, kameraGenel, kameraPistiGoster, kameraKaydir, kameraYakinlas, kameraTakip, kameraUcan, ekrandanYola, ekranKaydirma, ciz,
     get scene() { return scene; }, get camera() { return camera; },
   };
 })();
