@@ -5,7 +5,7 @@
 // =============================================================
 
 const Oyun = (() => {
-  const SURUM = 16;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
+  const SURUM = 17;   // sw.js ONBELLEK numarasıyla aynı tut; oyuncular farklı sürümdeyse uyarı çıkar
   const $ = id => document.getElementById(id);
   const T_ = Dunya.TURLER, K_ = Dunya.KATLAR;
   Sahne.kur($('sahne'));
@@ -510,12 +510,14 @@ const Oyun = (() => {
   kanvas.addEventListener('pointerdown', e => {
     Ses.baslat();
     if (!kameraSerbest()) return;
+    if (ucuyor() && e.pointerType === 'mouse' && document.pointerLockElement !== kanvas) { fareKilitle(); return; }   // serbest bakış: tıkla, fare kilitlensin
     parmaklar.set(e.pointerId, { x: e.clientX, y: e.clientY });
     try { kanvas.setPointerCapture(e.pointerId); } catch (x) { }
     if (parmaklar.size === 2) { const [a, b] = [...parmaklar.values()]; ikiParmak = { mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) }; if (surukle) surukle.kaydi = true; return; }
     surukle = { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, buton: e.button, tip: e.pointerType, kaydi: false };
   });
   kanvas.addEventListener('pointermove', e => {
+    if (document.pointerLockElement === kanvas) return;   // kilitliyken dönüşü aşağıdaki mousemove yapar
     if (parmaklar.has(e.pointerId)) parmaklar.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ikiParmak && parmaklar.size >= 2 && !ucuyor()) {
       const [a, b] = [...parmaklar.values()], mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -557,6 +559,11 @@ const Oyun = (() => {
   }, { passive: false });
   // ---------- Serbest bakış: FiraRun'daki uçan kamera ----------
   const ucuyor = () => O?.faz === 'yaris' && O.izle?.mod === 'serbest' && !!O.izle.poz;
+  // Fare kilidi: serbest bakışta fareye basmadan, sadece oynatarak etrafa bak. ESC imleci bırakır, tıklayınca yeniden kilitlenir.
+  function fareKilitle() { if (dokun || !ucuyor() || document.pointerLockElement === kanvas) return; try { const s = kanvas.requestPointerLock(); if (s && s.catch) s.catch(() => {}); } catch (x) { } }
+  function fareBirak() { if (document.pointerLockElement === kanvas) try { document.exitPointerLock(); } catch (x) { } }
+  document.addEventListener('mousemove', e => { if (document.pointerLockElement === kanvas && ucuyor()) bakisCevir(e.movementX || 0, e.movementY || 0, 0.8); });
+  document.addEventListener('pointerlockchange', () => { if (O?.izle) izlePanelCiz(); });
   function bakisCevir(dx, dy, k = 1) { const I = O.izle; I.yaw += dx * 0.0042 * k; I.pitch = Math.max(-1.45, Math.min(1.45, I.pitch + dy * 0.0036 * k)); }
   const joy = { x: 0, y: 0, id: null }, J = $('joystick'), JT = $('joyTop');
   function joyAyarla(e) {
@@ -806,8 +813,9 @@ const Oyun = (() => {
       const p = Sahne.camera.position, d = new THREE.Vector3(); Sahne.camera.getWorldDirection(d);
       O.izle.poz = { x: p.x, y: p.y, z: p.z }; O.izle.yaw = Math.atan2(d.z, d.x); O.izle.pitch = Math.max(-1.2, Math.min(1.2, -Math.asin(d.y)));
       Sahne.kameraUcan(O.izle.poz, O.izle.yaw, O.izle.pitch);
+      fareKilitle();
     }
-    else izleDegistir(0);
+    else { fareBirak(); izleDegistir(0); }
     J.classList.toggle('gizli2', !ac);
     izlePanelCiz();
   }
@@ -820,7 +828,7 @@ const Oyun = (() => {
     $('izleAd').textContent = serbest ? '🎥 Serbest bakış' : `👀 ${ad(O.izle.no)}`;
     $('izleSerbestBtn').textContent = serbest ? '👀 Oyuncuyu izle' : '🎥 Serbest bakış';
     $('izleOnceBtn').disabled = $('izleSonraBtn').disabled = false;
-    $('ipucu').textContent = dokun ? '' : serbest ? 'Fareyle sürükle: bak · W baktığın yöne git · A D yana · Boşluk yukarı · Shift aşağı · Tekerlek ileri/geri · F: oyuncuyu izle' : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
+    $('ipucu').textContent = dokun ? '' : serbest ? (document.pointerLockElement === kanvas ? 'Fareyi oynat: bak · W baktığın yöne git · A D yana · Boşluk yukarı · Shift aşağı · ESC: imleci bırak · F: oyuncuyu izle' : 'Ekrana tıkla: fareyle bakmaya başla · W A S D: uç · Boşluk / Shift: yukarı / aşağı · F: oyuncuyu izle') : '◀ ▶ (Q / E): başka oyuncuyu izle · F: serbest bakış';
   }
   $('izleOnceBtn').onclick = () => izleDegistir(-1);
   $('izleSonraBtn').onclick = () => izleDegistir(1);
@@ -866,6 +874,7 @@ const Oyun = (() => {
   // ---------- Ana döngü ----------
   let son = performance.now(), elleSur = false;
   function kare(dt) {
+    if (document.pointerLockElement === kanvas && !ucuyor()) fareBirak();   // serbest bakış bitince fare serbest kalsın
     if (O) {
       fareKare(dt);
       if (O.faz === 'yerlestir') yerlestirKare();
